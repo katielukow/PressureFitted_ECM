@@ -1,11 +1,9 @@
 module PIECM
 
-using CSV, DataFrames, Dates, Infiltrator, BenchmarkTools, Plots, JLD2
+using CSV, DataFrames, Dates, Infiltrator, BenchmarkTools, Plots, JLD2, Interpolations
 
-plotly()
-
-
-
+export arbin_data_import, pressure_data_import, pressurematch, POCV, HPPC, hppc_pulse, pocv_calc, avgr0
+export ecm_discrete, costfunction, opmtimiser
 
 # Functions
 
@@ -182,6 +180,13 @@ function hppc_calc(dataframe, i, init_V)
 	return [r, P_avg, t[1], t[2], t[3], t[4]]
 end
 
+function hppc_pulse(data, soc, soc_increment, pulse_rate, dis_pulse_step, char_pulse_step)
+	
+    df = filter(row -> row."TC_Counter1" == soc/soc_increment && row."TC_Counter2" == pulse_rate - 1, data)
+	return filter(row -> row."Step_Index" == dis_pulse_step || row."Step_Index" == char_pulse_step || row."Step_Index" == (char_pulse_step-1) || row."Step_Index" == (dis_pulse_step-1), df)
+
+end
+
 function avgr0(hppc_data)
     data = DataFrame()
     soc = DataFrame()
@@ -203,54 +208,19 @@ end
 # Fitting Data
 # SLPB7336128HV
 
-A_cell₁ = .128 * .036 # m2
-cd₁ = arbin_data_import("data/HPPC/220729_CPF_HPPC_Melasta_SLPB7336128HV_11_0041_90kPa_25C_Channel_7_Wb_1.csv")
-pd₁ = pressure_data_import("data/HPPC/220729_CPF_HPPC_Melasta_SLPB7336128HV_11_0041_90kPa_25C_pres.csv")
-ocvd₁ = arbin_data_import("data/OCV/220310_BTC_POCV_GITT_Mel_SLPB7336128HV_1_25C_Channel_5_Wb_1.csv")
-
-p₁ = pressurematch(cd₁, pd₁, A_cell₁)
-
-ocv₁ = pocv_calc(ocvd₁, 5, 8, 100)
-hppc₁, r₁ = HPPC(cd₁,5, 2, 15, 17, 20, 5, 11)
-
-R0₁ = avgr0(hppc₁)
 # ----------------------------------
 
-
-function ecmfit(OCV_data, Q, fitting_data, R0)
-
-    # Q = 0
-    # η = 0
-    # Δ = 0.1 # time step Δt
-    # x = [0,0] # R1 C1
-    R0 = mean(R0[1,:])
-    # p = [R1 C1]
-    p = [RC1]
-    v = fitting_data.Voltage
-    i = fitting_data.Current
-
-    # u[1] = z ? am I doing this right?!
-    # u[2] = iᵣ ? am I doing this right?!
-
-    for j in 1:length(fittingdata[:,1])
-        du[1] = -i[j] / Q
-        # du[2] = diᵣ = - 1 / (p[1] * p[2]) * u[2] + 1 / (p[1] * p[2]) * i
-        # v = OCV_data(u[1]) + p[1] * u[2] - R0 * i
-        v[j] = OCV_data(u[1]) + p[1] - R0 * i[j]
-    end
-
-
-end
-
-# x = [Rᵢ, Cᵢ]
+# x = [Rᵢ, Cᵢ, R₀]
 # n_RC is number of RC pairs
 # uᵢ is current vector input for prediction
 # Δ is timestep
 # η = coloumbic efficiency 
 # R0 is measured ohmic resistance vector from HPPC data
 # Q = capacity
+R1 = 11339.547369000002
 
-function ecm_discrete(x, n_RC, uᵢ, Δ, η, R₀, Q, OCV)
+
+function ecm_discrete(x, n_RC, uᵢ, Δ, η, Q, OCV, init_cap)
     # # RC Params
     A_RC = sqrzeros(n_RC)
     B_RC = zeros(n_RC)
@@ -258,25 +228,51 @@ function ecm_discrete(x, n_RC, uᵢ, Δ, η, R₀, Q, OCV)
     z = Array{Float64}(undef, length(uᵢ))
     iᵣ = Array{Float64}(undef, length(uᵢ))
     v = Array{Float64}(undef, length(uᵢ))
+    Δ_new = Array{Float64}(undef, length(Δ))
 
     # for α in 1:n_RC
     #     F = exp(-Δ/(x[1]*x[2]))
     #     A_RC[α,α] = F
     #     B_RC[α] = (1-F)
     # end
+    uᵢ = uᵢ .* -1
+    z[1] = init_cap
+    z[2] = init_cap
+    interp_linear = linear_interpolation(OCV."State_of_Charge", OCV."Voltage")
+    v[1] = interp_linear(init_cap)
+    v[2] = interp_linear(init_cap)
+    iᵣ[1]=0
 
-    A_RC = exp(-Δ/(x[1]*x[2]))
-    B_RC = 1 - exp(-Δ/(x[1]*x[2]))
+    Δ .-= Δ[1]
 
-    for k in 1:length(uᵢ)-1
-        z[k+1] = z[k] + (-η * Δ / Q) * uᵢ[k]
+    for i in 1:length(Δ)-1
+        Δ_new[i+1] = Δ[i+1] - Δ[i]
+    end
+
+    Δ_new .*= 1/3600
+
+    for k in 2:length(uᵢ)-1
+        A_RC = exp(-(Δ_new[k])/(x[1]*x[2]))
+        B_RC = 1 - exp(-(Δ_new[k])/(x[1]*x[2]))
+        z[k+1] = z[k] - ((Δ_new[k+1]) / Q) * uᵢ[k]
         iᵣ[k+1] = A_RC * iᵣ[k] + B_RC * uᵢ[k] # solve matrix dimensionality issues for multiple RC pairs
-        # v[k] = filter(row -> row.State_of_Charge == round(z[k], digits=0), OCV)[:,:Voltage] + x[1] * iᵣ[k] - R₀ * uᵢ[k]
-        v[k] = OCV + x[1] * iᵣ[k] - R₀ * uᵢ[k]
+        v[k] = interp_linear(z[k]) - x[1] * iᵣ[k] - x[3] * uᵢ[k]
+
     end
 
     return v
 
+end
+
+function costfunction(data, x, n_RC, Δ, η, Q, OCV, init_cap)
+
+    v = ecm_discrete(x, n_RC, data."Current(A)", Δ, η, Q, OCV, init_cap)
+    return (v.-data."Voltage(V)") #rmse
+
+end
+
+function opmtimiser(data, x_bounds)
+    optim(costfunction, x_bounds, data)
 end
 
 end
