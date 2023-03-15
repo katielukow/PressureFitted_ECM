@@ -3,7 +3,7 @@ module PIECM
 using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations 
 using StatsBase: L1dist
  
-export data_import, pressure_date_format_fix, pressurematch, POCV, HPPC, hppc_pulse, pocv_calc, avgr0
+export data_import, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv_calc
 export ecm_discrete, costfunction, costfunction_closed
 
 # --------------- Fitting data import and calculations -----------------------------
@@ -72,55 +72,52 @@ end
 function hppc_pulse(data, soc, soc_increment, pulse_rate, dis_pulse_step, char_pulse_step)
 	
     df = filter(row -> row."TC_Counter1" == (soc/soc_increment) - 1 && row."TC_Counter2" == pulse_rate - 1, data)
+	# df = filter(row -> row."Step_Index" == dis_pulse_step || row."Step_Index" == char_pulse_step || row."Step_Index" == (char_pulse_step-1)|| row."Step_Index" == (char_pulse_step+1) || row."Step_Index" == (dis_pulse_step-1), df)
+	
 	return filter(row -> row."Step_Index" == dis_pulse_step || row."Step_Index" == char_pulse_step || row."Step_Index" == (char_pulse_step-1)|| row."Step_Index" == (char_pulse_step+1), df)
-
+	# return df[3:end,:]
 end
 
 # ----------------------------------
 # x = [Rᵢ, Cᵢ, R₀]
-# n_RC is number of RC pairs
-# uᵢ is current vector input for prediction
-# Δ is timestep
+# n_RC = number of RC pairs
+# uᵢ = current vector input for prediction [A]
+# Δ = timestep [s]
 # η = coloumbic efficiency 
-# R0 is measured ohmic resistance vector from HPPC data
-# Q = capacity
+# Q = capacity [Ah]
 
-
+# Static time step forward model
 function ecm_discrete(x, n_RC, uᵢ, Δ :: Float64, η, Q, OCV, init_cap)
-    # # RC Params
+    
+	interp_linear = linear_interpolation(OCV."State_of_Charge", OCV."Voltage") # Interpolation function for OCV based on capacity change
+	
+	# # RC Params
     A_RC = sqrzeros(n_RC)
     B_RC = zeros(n_RC)
 
     z = Array{Float64}(undef, length(uᵢ))
     iᵣ = Array{Float64}(undef, length(uᵢ))
     v = Array{Float64}(undef, length(uᵢ))
-    # Δ_new = Array{Float64}(undef, length(Δ))
 
-    # for α in 1:n_RC
+    uᵢ = uᵢ .* -1 # Changes charge / discharge convention to match Plett ISBN:978-1-63081-023-8
+
+	# Initial Values
+    z[1] = init_cap
+	z[2] = z[1] - (η*((Δ)/3600) / Q) * uᵢ[1]
+    v[1] = interp_linear(init_cap)
+    iᵣ[1]=0 # can this be a proper term?
+
+	# for α in 1:n_RC
     #     F = exp(-Δ/(x[1]*x[2]))
     #     A_RC[α,α] = F
     #     B_RC[α] = (1-F)
     # end
-    uᵢ = uᵢ .* -1
-    z[1] = init_cap
-	z[2] = z[1] - (η*((Δ)/3600) / Q) * uᵢ[1]
-    # z[2] = init_cap
-
-    interp_linear = linear_interpolation(OCV."State_of_Charge", OCV."Voltage")
-    v[1] = interp_linear(init_cap)
-    # v[2] = interp_linear(init_cap)
-    iᵣ[1]=0
-
-	# Δ = Δ * 1/3600
 
 	for k in 2:length(uᵢ)-1
-
+		A_RC = exp(-(Δ)/(x[1]*x[2]))
+        B_RC = 1 - exp(-(Δ)/(x[1]*x[2]))
         z[k+1] = z[k] - (η*((Δ)/3600) / Q) * uᵢ[k]
-
-		iᵣ[k+1] = exp(-(Δ)/(x[1]*x[2])) * iᵣ[k] + (1 - exp(-(Δ)/(x[1]*x[2]))) * uᵢ[k] # solve matrix dimensionality issues for multiple RC pairs
-        
-		# @infiltrate cond = true
-
+		iᵣ[k+1] = A_RC * iᵣ[k] + B_RC * uᵢ[k] # solve matrix dimensionality issues for multiple RC pairs
 		v[k] = interp_linear(z[k]) - (x[1] * iᵣ[k]) - (x[3] * uᵢ[k])
     end
 
@@ -131,13 +128,33 @@ function ecm_discrete(x, n_RC, uᵢ, Δ :: Float64, η, Q, OCV, init_cap)
 end
 
 function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, init_cap)
-    # # RC Params
+        
+	interp_linear = linear_interpolation(OCV."State_of_Charge", OCV."Voltage") # Interpolation function for OCV based on capacity change
+	
+	# # RC Params
     A_RC = sqrzeros(n_RC)
     B_RC = zeros(n_RC)
+
     z = Array{Float64}(undef, length(uᵢ))
     iᵣ = Array{Float64}(undef, length(uᵢ))
     v = Array{Float64}(undef, length(uᵢ))
-    Δ_new = Array{Float64}(undef, length(Δ))
+    τ = Array{Float64}(undef, length(Δ))
+
+	uᵢ = uᵢ .* -1 # Changes charge / discharge convention to match Plett ISBN:978-1-63081-023-8
+
+	# Change time vector to τ for each index 
+	Δ .-= Δ[1]
+	for i in 1:length(Δ)-1
+		τ[i+1] = Δ[i+1] - Δ[i]
+	end
+
+	# Initial Values
+    z[1] = init_cap
+	z[2] = z[1] - (η*((τ[1])/3600) / Q) * uᵢ[1]
+    v[1] = interp_linear(init_cap)
+    iᵣ[1]=0 # can this be a proper term?
+
+
 
     # for α in 1:n_RC
     #     F = exp(-Δ/(x[1]*x[2]))
@@ -145,70 +162,46 @@ function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, init_cap)
     #     B_RC[α] = (1-F)
     # end
 
-    uᵢ = uᵢ .* -1
-    z[1] = init_cap
-	z[2] = z[1] - (η*(Δ[2]) / Q) * uᵢ[1]
-
-    interp_linear = linear_interpolation(OCV."State_of_Charge", OCV."Voltage")
-    v[1] = interp_linear(init_cap)
-    iᵣ[1]=-25
-
-    Δ .-= Δ[1]
-
-    for i in 1:length(Δ)-1
-        Δ_new[i+1] = Δ[i+1] - Δ[i]
-    end
-
-    # Δ_new .*= 1/3600
-
-
     for k in 2:length(uᵢ)-1
-        A_RC = exp(-(Δ_new[k])/(x[1]*x[2]))
-
-        B_RC = 1 - exp(-(Δ_new[k])/(x[1]*x[2]))
-
-        z[k+1] = z[k] - (η*((Δ_new[k+1])/3600) / Q) * uᵢ[k]
-
-        iᵣ[k+1] = exp(-(Δ_new[k])/(x[1]*x[2])) * iᵣ[k] + (1 - exp(-(Δ_new[k])/(x[1]*x[2]))) * uᵢ[k] # solve matrix dimensionality issues for multiple RC pairs
-        
-
+        A_RC = exp(-(τ[k])/(x[1]*x[2]))
+        B_RC = 1 - exp(-(τ[k])/(x[1]*x[2]))
+        z[k+1] = z[k] - (η*((τ[k+1])/3600) / Q) * uᵢ[k]
+        iᵣ[k+1] = exp(-(τ[k])/(x[1]*x[2])) * iᵣ[k] + (1 - exp(-(τ[k])/(x[1]*x[2]))) * uᵢ[k] # solve matrix dimensionality issues for multiple RC pairs
 		v[k] = interp_linear(z[k]) - (x[1] * iᵣ[k]) - (x[3] * uᵢ[k])
     end
 
-
     v[end] = v[end-1]
-
     return v
 
 end
 
 function costfunction(data, x, n_RC, uᵢ, Δ, η, Q, OCV, init_cap)
-
 	v = ecm_discrete(x, n_RC, uᵢ, Δ, η, Q, OCV, init_cap)
 	return L1dist(v,data."Voltage(V)") 
-
 end
 
 
-function costfunction_closed(x_mod)
-    
-    x = x_mod
-	fitting_data = arbin_data_import("data/HPPC/220729_CPF_HPPC_Melasta_SLPB7336128HV_11_0041_90kPa_25C_Channel_7_Wb_1.csv")
-	hppc_fit = hppc_pulse(fitting_data, 55, 5, 1, 15, 17)
-	ocvd = arbin_data_import("data/OCV/220310_BTC_POCV_GITT_Mel_SLPB7336128HV_1_25C_Channel_5_Wb_1.csv")
-	ocv = pocv_calc(ocvd, 5, 8, 100)
+function costfunction_closed(x)
+	
+	# data import
+	cd₁ = data_import("data/HPPC/220729_CPF_HPPC_Melasta_SLPB7336128HV_11_0041_90kPa_25C_Channel_7_Wb_1.csv")
+	hppc = hppc_pulse(cd₁, 55, 5, 1, 15, 17)
+	hppc."Test_Time(s)" .-= hppc."Test_Time(s)"[1]
 
-	data = select(hppc_fit, "Voltage(V)", "Current(A)")
+	ocvd₁ = data_import("data/OCV/220310_BTC_POCV_GITT_Mel_SLPB7336128HV_1_25C_Channel_5_Wb_1.csv")
+	ocv₁ = pocv_calc(ocvd₁, 5, 8, 100)
+
+	# Forward model parameters
+	data = hppc
 	n_RC = 1
 	# uᵢ = [ones(100).*-27.49736; ones(400).*0; ones(100).*5.998779 ;ones(400).*0]
-	uᵢ = hppc_fit."Current(A)"
-	Δ = 0.1  
+	uᵢ = hppc."Current(A)"
+	Δ = hppc."Test_Time(s)"  
 	η = 0.999
 	Q = 3.7
 	init_cap = 55
 
-
-    return costfunction(data, x, n_RC, uᵢ, Δ, η, Q, ocv, init_cap)
+    return costfunction(data, x, n_RC, uᵢ, Δ, η, Q, ocv₁, init_cap)
 
 end 
 
