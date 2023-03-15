@@ -1,62 +1,31 @@
 module PIECM
 
-using CSV, DataFrames, Dates, Infiltrator, BenchmarkTools, Plots, JLD2, Interpolations
+using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations 
+using StatsBase: L1dist
+ 
+export data_import, pressure_date_format_fix, pressurematch, POCV, HPPC, hppc_pulse, pocv_calc, avgr0
+export ecm_discrete, costfunction, costfunction_closed
 
-export arbin_data_import, pressure_data_import, pressurematch, POCV, HPPC, hppc_pulse, pocv_calc, avgr0
-export ecm_discrete, costfunction, opmtimiser
-
-# Functions
+# --------------- Fitting data import and calculations -----------------------------
 
 sqrzeros(A) = zeros(A,A)
+data_import(file_name) = CSV.read(file_name, DataFrame)
 
-function arbin_data_import(file_name)
-    return  CSV.read(file_name, DataFrame)
-end
-
-# Only use if date format does not match Arbin date format
-function pressure_data_import(file_name)
+# Imports pressure data and matches date format to the Arbin format
+function pressure_dateformat_fix(file_name)
     data = CSV.read(file_name, DataFrame)
     data.Time = Dates.format.(data.Time, "HH:MM:SS")
     data.Date = Date.(data.Date, "dd/mm/yyyy")
     data.Date = Dates.format.(data.Date, "yyyy/mm/dd")
     data.Date_Time = data.Date .* " " .* data.Time
-
     return data
 end
 
+# Convert force to pressure and match date-time 
 function pressurematch(cell_data, pressure_data, A_cell)
-    # look at dynamic time warping?
- 
-    pressure_data.Pressure = pressure_data.Force ./ A_cell # Pascal
-    p_updated = innerjoin(cell_data, pressure_data, on = :Date_Time)
-    
-    p_updated = select(p_updated, "Date_Time", "Step_Index", "TC_Counter1", "TC_Counter2", "Current(A)", "Voltage(V)", "Pressure", "Discharge_Capacity(Ah)", "Charge_Capacity(Ah)")
-    return p_updated
-
-end
-
-function POCV(file_name, POCV_discharge_step, POCV_charge_step, OCV_steps, init_temp)
-	m = load(file_name)
-	α = Dict()
-
-	for i in 0:(length(m)-1)
-		n = string((init_temp+i*10))
-
-		if length(m) > 1
-			df = m[n*"C"]
-		else
-			df = m["data"]
-		end
-
-		if length(m) > 1
-			α[n*"C"] = pocv_calc(df, POCV_discharge_step, POCV_charge_step, OCV_steps)
-		else
-			α["data"] = pocv_calc(df, POCV_discharge_step, POCV_charge_step, OCV_steps)
-		end
-	end
-
-    return α
-
+    pressure_data.Pressure = pressure_data.Force ./ A_cell # Convert force to pressure (Pa)
+    p_updated = innerjoin(cell_data, pressure_data, on = :Date_Time) # Match date times
+    return select(p_updated, "Date_Time", "Step_Index", "TC_Counter1", "TC_Counter2", "Current(A)", "Voltage(V)", "Pressure", "Discharge_Capacity(Ah)", "Charge_Capacity(Ah)")
 end
 
 function pocv_calc(df, POCV_discharge_step, POCV_charge_step, OCV_steps)
@@ -100,116 +69,14 @@ function pocv_calc(df, POCV_discharge_step, POCV_charge_step, OCV_steps)
 	return DataFrame(State_of_Charge=POCV_SOC, Voltage=POCV_V, DisVoltage=POCVd_updated[:,2], DisSOC=POCVd_updated[:,1], CharVoltage=POCVc_updated[:,2], CharSOC=POCVc_updated[:,1], DisEnergy=POCVd_updated[:,3])
 end
 
-function HPPC(data, soc_increment, no_pulse_rates, dis_pulse_step, char_pulse_step, dis_step, initial_cap_step, DCIR_step)
-        
-    γ = Dict()
-		initial_capacity = select(filter(row -> row."Step_Index" == initial_cap_step, data), "Discharge_Capacity(Ah)")
-
-		DCIR = unique(select(filter(row -> row."Step_Index" == DCIR_step, data), "Internal_Resistance(Ohm)"))
-
-		for b in 0:(no_pulse_rates-1)
-			soc_steps = length(collect(0:soc_increment:100))-1
-			SOC = Array{Float64}(undef, soc_steps, 1)
-			∇_discharge = DataFrame([[], [], [], [], [], [], []], ["SOC", "Resistance", "Average Power (W)", "Max Power (W)", "Min Power (W)", "Max Current(A)", "Min Current(A)"])	
-			∇_charge = DataFrame([[], [], [], [], [], [], []], ["SOC", "Resistance", "Average Power (W)", "Max Power (W)", "Min Power (W)", "Max Current(A)", "Min Current(A)"])
-
-			dpulse_v = filter(row -> row."Step_Index" == (dis_pulse_step-1) && row."TC_Counter2" == b, data)
-			cpulse_v = filter(row -> row."Step_Index" == (char_pulse_step-1) && row."TC_Counter2" == b, data)
-			df_dpulse = filter(row -> row."Step_Index" == dis_pulse_step && row."TC_Counter2" == b, data) 
-			df_cpulse = filter(row -> row."Step_Index" == char_pulse_step && row."TC_Counter2" == b, data)
-			df_discharge = filter(row -> row."Step_Index" == dis_step && row."TC_Counter2" == b, data)
-
-			# Calculate State of Charge based on capacities - Discharge to next step + discharge pulse - charge pulse
-			# for g in 0:(soc_steps-1)
-
-			for g in 0:findmax(df_discharge[:,"TC_Counter1"])[1]
-				o = filter(row -> row."TC_Counter1" == g, df_discharge)
-				dis_step_cap = o[end, "Discharge_Capacity(Ah)"] - o[1, "Discharge_Capacity(Ah)"]
-				k = filter(row -> row."TC_Counter1" == g, df_dpulse)
-				pulse_cap_d = k[end, "Discharge_Capacity(Ah)"] - k[1, "Discharge_Capacity(Ah)"]
-				p = filter(row -> row."TC_Counter1" == g, df_cpulse)
-				pulse_cap_c = p[end, "Charge_Capacity(Ah)"] - p[1, "Charge_Capacity(Ah)"]
-
-				SOC[g+1] = dis_step_cap + pulse_cap_d - pulse_cap_c
-			end
-
-			SOC = cumsum(SOC[:,1])
-			SOC = 100 .- SOC ./ initial_capacity[end,1] .* 100
-
-			# Calculate relevant data for each SOC point
-			for j in 1:(findmax(df_dpulse[:,"TC_Counter1"])[1]+1)
-				dpulse_vi = filter(row -> row."TC_Counter1" == j-1, dpulse_v)[end,"Voltage(V)"]
-				discharge = hppc_calc(df_dpulse, j, dpulse_vi)
-				push!(∇_discharge, [SOC[j], discharge[1], discharge[2], discharge[3], discharge[4], discharge[5], discharge[6]])
-			end
-
-			for q in 1:(findmax(df_cpulse[:,"TC_Counter1"])[1]+1)
-				cpulse_vi = filter(row -> row."TC_Counter1" == q-1, cpulse_v)[end,"Voltage(V)"]
-				charge = hppc_calc(df_cpulse, q, cpulse_vi)
-				push!(∇_charge, [SOC[q], charge[1], charge[2], charge[3], charge[4], charge[5], charge[6]])
-			end
-			
-			# ∇_charge[:,"SOC"] = 100 .- ∇_charge[:,"SOC"]
-
-			rate = string((b+1))
-
-			γ["Pulse Rate " * rate] = Dict("Charge" => ∇_charge, "Discharge" => ∇_discharge)
-
-		end
-
-	return γ, DCIR
-end
-
-function hppc_calc(dataframe, i, init_V)
-	df = filter(row -> row."TC_Counter1" == (i-1), dataframe)
-
-	r = abs((init_V - df[end,"Voltage(V)"]) / abs(mean(df[:,"Current(A)"])))
-	P = df[:,"Voltage(V)"] .* df[:,"Current(A)"]
-	P_min = findmin(abs.(P))[1]
-	P_max = findmax(abs.(P))[1]
-	P_avg = mean(P)
-	I_min = findmin(abs.(df[:,"Current(A)"]))[1]
-	I_max = findmax(abs.(df[:,"Current(A)"]))[1]
-	
-	t = [P_max P_min I_max I_min]
-
-	if df[1, "Current(A)"] < 0
-		t .= -t
-	end
-
-	return [r, P_avg, t[1], t[2], t[3], t[4]]
-end
-
 function hppc_pulse(data, soc, soc_increment, pulse_rate, dis_pulse_step, char_pulse_step)
 	
-    df = filter(row -> row."TC_Counter1" == soc/soc_increment && row."TC_Counter2" == pulse_rate - 1, data)
-	return filter(row -> row."Step_Index" == dis_pulse_step || row."Step_Index" == char_pulse_step || row."Step_Index" == (char_pulse_step-1) || row."Step_Index" == (dis_pulse_step-1), df)
+    df = filter(row -> row."TC_Counter1" == (soc/soc_increment) - 1 && row."TC_Counter2" == pulse_rate - 1, data)
+	return filter(row -> row."Step_Index" == dis_pulse_step || row."Step_Index" == char_pulse_step || row."Step_Index" == (char_pulse_step-1)|| row."Step_Index" == (char_pulse_step+1), df)
 
 end
-
-function avgr0(hppc_data)
-    data = DataFrame()
-    soc = DataFrame()
-
-    for i in eachindex(hppc_data)
-        for j in eachindex(hppc_data[i])
-            data[:,i*" "*j] = hppc_data[i][j][:, "Resistance"]
-            soc[:,i*" "*j] = hppc_data[i][j][:, "SOC"]
-        end
-    end
-
-    combine(data, AsTable(:) => ByRow(mean), renamecols=true)
-    combine(soc, AsTable(:) => ByRow(mean), renamecols=true)
-    
-    return data
-end
-
-
-# Fitting Data
-# SLPB7336128HV
 
 # ----------------------------------
-
 # x = [Rᵢ, Cᵢ, R₀]
 # n_RC is number of RC pairs
 # uᵢ is current vector input for prediction
@@ -217,14 +84,56 @@ end
 # η = coloumbic efficiency 
 # R0 is measured ohmic resistance vector from HPPC data
 # Q = capacity
-R1 = 11339.547369000002
 
 
-function ecm_discrete(x, n_RC, uᵢ, Δ, η, Q, OCV, init_cap)
+function ecm_discrete(x, n_RC, uᵢ, Δ :: Float64, η, Q, OCV, init_cap)
     # # RC Params
     A_RC = sqrzeros(n_RC)
     B_RC = zeros(n_RC)
 
+    z = Array{Float64}(undef, length(uᵢ))
+    iᵣ = Array{Float64}(undef, length(uᵢ))
+    v = Array{Float64}(undef, length(uᵢ))
+    # Δ_new = Array{Float64}(undef, length(Δ))
+
+    # for α in 1:n_RC
+    #     F = exp(-Δ/(x[1]*x[2]))
+    #     A_RC[α,α] = F
+    #     B_RC[α] = (1-F)
+    # end
+    uᵢ = uᵢ .* -1
+    z[1] = init_cap
+	z[2] = z[1] - (η*((Δ)/3600) / Q) * uᵢ[1]
+    # z[2] = init_cap
+
+    interp_linear = linear_interpolation(OCV."State_of_Charge", OCV."Voltage")
+    v[1] = interp_linear(init_cap)
+    # v[2] = interp_linear(init_cap)
+    iᵣ[1]=0
+
+	# Δ = Δ * 1/3600
+
+	for k in 2:length(uᵢ)-1
+
+        z[k+1] = z[k] - (η*((Δ)/3600) / Q) * uᵢ[k]
+
+		iᵣ[k+1] = exp(-(Δ)/(x[1]*x[2])) * iᵣ[k] + (1 - exp(-(Δ)/(x[1]*x[2]))) * uᵢ[k] # solve matrix dimensionality issues for multiple RC pairs
+        
+		# @infiltrate cond = true
+
+		v[k] = interp_linear(z[k]) - (x[1] * iᵣ[k]) - (x[3] * uᵢ[k])
+    end
+
+    v[end] = v[end-1]
+
+    return v
+
+end
+
+function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, init_cap)
+    # # RC Params
+    A_RC = sqrzeros(n_RC)
+    B_RC = zeros(n_RC)
     z = Array{Float64}(undef, length(uᵢ))
     iᵣ = Array{Float64}(undef, length(uᵢ))
     v = Array{Float64}(undef, length(uᵢ))
@@ -235,13 +144,14 @@ function ecm_discrete(x, n_RC, uᵢ, Δ, η, Q, OCV, init_cap)
     #     A_RC[α,α] = F
     #     B_RC[α] = (1-F)
     # end
+
     uᵢ = uᵢ .* -1
     z[1] = init_cap
-    z[2] = init_cap
+	z[2] = z[1] - (η*(Δ[2]) / Q) * uᵢ[1]
+
     interp_linear = linear_interpolation(OCV."State_of_Charge", OCV."Voltage")
     v[1] = interp_linear(init_cap)
-    v[2] = interp_linear(init_cap)
-    iᵣ[1]=0
+    iᵣ[1]=-25
 
     Δ .-= Δ[1]
 
@@ -249,31 +159,58 @@ function ecm_discrete(x, n_RC, uᵢ, Δ, η, Q, OCV, init_cap)
         Δ_new[i+1] = Δ[i+1] - Δ[i]
     end
 
-    Δ_new .*= 1/3600
+    # Δ_new .*= 1/3600
+
 
     for k in 2:length(uᵢ)-1
         A_RC = exp(-(Δ_new[k])/(x[1]*x[2]))
-        B_RC = 1 - exp(-(Δ_new[k])/(x[1]*x[2]))
-        z[k+1] = z[k] - ((Δ_new[k+1]) / Q) * uᵢ[k]
-        iᵣ[k+1] = A_RC * iᵣ[k] + B_RC * uᵢ[k] # solve matrix dimensionality issues for multiple RC pairs
-        v[k] = interp_linear(z[k]) - x[1] * iᵣ[k] - x[3] * uᵢ[k]
 
+        B_RC = 1 - exp(-(Δ_new[k])/(x[1]*x[2]))
+
+        z[k+1] = z[k] - (η*((Δ_new[k+1])/3600) / Q) * uᵢ[k]
+
+        iᵣ[k+1] = exp(-(Δ_new[k])/(x[1]*x[2])) * iᵣ[k] + (1 - exp(-(Δ_new[k])/(x[1]*x[2]))) * uᵢ[k] # solve matrix dimensionality issues for multiple RC pairs
+        
+
+		v[k] = interp_linear(z[k]) - (x[1] * iᵣ[k]) - (x[3] * uᵢ[k])
     end
+
+
+    v[end] = v[end-1]
 
     return v
 
 end
 
-function costfunction(data, x, n_RC, Δ, η, Q, OCV, init_cap)
+function costfunction(data, x, n_RC, uᵢ, Δ, η, Q, OCV, init_cap)
 
-    v = ecm_discrete(x, n_RC, data."Current(A)", Δ, η, Q, OCV, init_cap)
-    return (v.-data."Voltage(V)") #rmse
-
-end
-
-function opmtimiser(data, x_bounds)
-    optim(costfunction, x_bounds, data)
-end
+	v = ecm_discrete(x, n_RC, uᵢ, Δ, η, Q, OCV, init_cap)
+	return L1dist(v,data."Voltage(V)") 
 
 end
+
+
+function costfunction_closed(x_mod)
     
+    x = x_mod
+	fitting_data = arbin_data_import("data/HPPC/220729_CPF_HPPC_Melasta_SLPB7336128HV_11_0041_90kPa_25C_Channel_7_Wb_1.csv")
+	hppc_fit = hppc_pulse(fitting_data, 55, 5, 1, 15, 17)
+	ocvd = arbin_data_import("data/OCV/220310_BTC_POCV_GITT_Mel_SLPB7336128HV_1_25C_Channel_5_Wb_1.csv")
+	ocv = pocv_calc(ocvd, 5, 8, 100)
+
+	data = select(hppc_fit, "Voltage(V)", "Current(A)")
+	n_RC = 1
+	# uᵢ = [ones(100).*-27.49736; ones(400).*0; ones(100).*5.998779 ;ones(400).*0]
+	uᵢ = hppc_fit."Current(A)"
+	Δ = 0.1  
+	η = 0.999
+	Q = 3.7
+	init_cap = 55
+
+
+    return costfunction(data, x, n_RC, uᵢ, Δ, η, Q, ocv, init_cap)
+
+end 
+
+
+end
