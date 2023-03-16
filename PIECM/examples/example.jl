@@ -1,4 +1,4 @@
-using PIECM, Plots, DataFrames, Optim
+using PIECM, Plots, Optim
 
 plotly()
 
@@ -24,7 +24,7 @@ x2 = [0.008, 3000, 0.012]
 # vₛ2 = ecm_discrete(x2, 1, uₜ, 0.1, 0.999, 3.7, ocv₁, 55)
 
 # Current from data (variable time step)
-v1 = ecm_discrete(x1, 1, hppc_55."Current(A)", hppc_55."Test_Time(s)", 0.999, 3.7, ocv₁, 55)
+v1 = ecm_discrete(x1, 2, hppc_55."Current(A)", hppc_55."Test_Time(s)", 0.999, 3.7, ocv₁, 55)
 # v2 = ecm_discrete(x2, 1, hppc_55."Current(A)", hppc_55."Test_Time(s)", 0.999, 3.7, ocv₁, 55)
 
 err = costfunction(hppc_55, x1, 1, hppc_55."Current(A)", hppc_55."Test_Time(s)", 0.999, 3.7, ocv₁, 55)
@@ -38,9 +38,23 @@ err = costfunction(hppc_55, x1, 1, hppc_55."Current(A)", hppc_55."Test_Time(s)",
 
 res = optimize(costfunction_closed, x1)
 xₙ = Optim.minimizer(res)
-
 vₙ = ecm_discrete(xₙ, 1, hppc_55."Current(A)", hppc_55."Test_Time(s)", 0.9997, 3.7, ocv₁, 55)
-plot(hppc_55."Test_Time(s)", vₙ, label = "ECM Optim")
-plot(hppc_55."Test_Time(s)",v1, label = "ECM Katie")
+
+res_PSO = optimize(costfunction_closed, x1, ParticleSwarm())
+xₚ = Optim.minimizer(res)
+vₚ = ecm_discrete(xₚ, 1, hppc_55."Current(A)", hppc_55."Test_Time(s)", 0.9997, 3.7, ocv₁, 55)
+
+plot(hppc_55."Test_Time(s)", vₙ, label = "Nedler Mead")
+plot(hppc_55."Test_Time(s)", vₚ, label = "PSO")
+# plot!(hppc_55."Test_Time(s)",v1, label = "ECM Katie")
 plot!(hppc_55."Test_Time(s)", hppc_55."Voltage(V)", label = "Experimental")
 
+
+# Run 1
+# * Candidate solution
+# Final objective value:     2.358317e+00
+# julia> xₙ
+# 3-element Vector{Float64}:
+#     0.039259411401955165
+#  2446.0228489920073
+#     0.012052944342782566

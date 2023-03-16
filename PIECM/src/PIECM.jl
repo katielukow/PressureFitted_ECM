@@ -3,7 +3,7 @@ module PIECM
 using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations 
 using StatsBase: L1dist
  
-export data_import, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv_calc
+export data_import, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv_calc, sqrzeros
 export ecm_discrete, costfunction, costfunction_closed
 
 # --------------- Fitting data import and calculations -----------------------------
@@ -136,7 +136,8 @@ function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, init_cap)
     B_RC = zeros(n_RC)
 
     z = Array{Float64}(undef, length(uᵢ))
-    iᵣ = Array{Float64}(undef, length(uᵢ))
+    iᵣ = Array{Float64}(undef, length(uᵢ), n_RC)
+	# iᵣ = Tuple
     v = Array{Float64}(undef, length(uᵢ))
     τ = Array{Float64}(undef, length(Δ))
 
@@ -152,25 +153,35 @@ function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, init_cap)
     z[1] = init_cap
 	z[2] = z[1] - (η*((τ[1])/3600) / Q) * uᵢ[1]
     v[1] = interp_linear(init_cap)
-    iᵣ[1]=0 # can this be a proper term?
+    iᵣ[1,:]= zeros(n_RC)' # can this be a proper term?
 
 
 
-    # for α in 1:n_RC
-    #     F = exp(-Δ/(x[1]*x[2]))
-    #     A_RC[α,α] = F
-    #     B_RC[α] = (1-F)
-    # end
+
 
     for k in 2:length(uᵢ)-1
-        A_RC = exp(-(τ[k])/(x[1]*x[2]))
-        B_RC = 1 - exp(-(τ[k])/(x[1]*x[2]))
+
+		for α in 1:n_RC
+			F = exp(-Δ[k]/(x[α]*x[(n_RC+α)]))
+			A_RC[α,α] = F
+			B_RC[α] = (1-F)
+		end
+
+        # A_RC = exp(-(τ[k])/(x[1]*x[2]))
+        # B_RC = 1 - exp(-(τ[k])/(x[1]*x[2]))
+
         z[k+1] = z[k] - (η*((τ[k+1])/3600) / Q) * uᵢ[k]
-        iᵣ[k+1] = exp(-(τ[k])/(x[1]*x[2])) * iᵣ[k] + (1 - exp(-(τ[k])/(x[1]*x[2]))) * uᵢ[k] # solve matrix dimensionality issues for multiple RC pairs
-		v[k] = interp_linear(z[k]) - (x[1] * iᵣ[k]) - (x[3] * uᵢ[k])
+		
+		# @infiltrate cond = true
+
+		iᵣ[k+1,:] = (A_RC * (iᵣ[k,:]) + B_RC * uᵢ[k])'
+
+		# solve matrix dimensionality issues for multiple RC pairs
+		v[k] = interp_linear(z[k])- sum(x[1:n_RC] .* iᵣ[k,:]') - (x[end] * uᵢ[k])
     end
 
     v[end] = v[end-1]
+
     return v
 
 end
@@ -193,7 +204,7 @@ function costfunction_closed(x)
 
 	# Forward model parameters
 	data = hppc
-	n_RC = 1
+	n_RC = 2
 	# uᵢ = [ones(100).*-27.49736; ones(400).*0; ones(100).*5.998779 ;ones(400).*0]
 	uᵢ = hppc."Current(A)"
 	Δ = hppc."Test_Time(s)"  
