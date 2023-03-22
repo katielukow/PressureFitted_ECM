@@ -74,7 +74,7 @@ end
 
 function hppc_pulse(data, soc, soc_increment, pulse_rate, dis_pulse_step, char_pulse_step)
 	
-    df = filter(row -> row."TC_Counter1" == ((100 - soc) / soc_increment) && row."TC_Counter2" == pulse_rate - 1, data)
+    df = filter(row -> row."TC_Counter1" == ((100 - soc) / soc_increment), data)
 	# df = filter(row -> row."Step_Index" == dis_pulse_step || row."Step_Index" == char_pulse_step || row."Step_Index" == (char_pulse_step-1)|| row."Step_Index" == (char_pulse_step+1) || row."Step_Index" == (dis_pulse_step-1), df)
 	
 	return filter(row -> row."Step_Index" == dis_pulse_step || row."Step_Index" == char_pulse_step || row."Step_Index" == (char_pulse_step-1)|| row."Step_Index" == (char_pulse_step+1), df)
