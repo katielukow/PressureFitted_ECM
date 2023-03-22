@@ -1,4 +1,4 @@
-using PIECM, Plots, Statistics
+using PIECM, Plots, Statistics, PGFPlotsX, LaTeXStrings
 
 plotly()
 Ϟ = distinguishable_colors(10)
@@ -13,18 +13,12 @@ function data_imp(hppc_file, pres_file, Acell)
 
 end
 
-function pres_avg(pres_file, data, Area)
+function pres_avg(pres_file, data, Area, digits)
     p = pressure_dateformat_fix(pres_file)
-    return round(mean(filter(!ismissing, pressurematch(data, p, Area[1] * Area[2])[:,"Pressure"]))/1000, digits=2)
+    return round(mean(filter(!ismissing, pressurematch(data, p, Area[1] * Area[2])[:,"Pressure"]))/1000, digits=digits)
 end
 
-# hppc_55_cpf90kpa, ocv₁ = data_imp("data/HPPC/220729_CPF_HPPC_Melasta_SLPB7336128HV_11_0041_90kPa_25C_Channel_7_Wb_1.csv", "data/OCV/220310_BTC_POCV_GITT_Mel_SLPB7336128HV_1_25C_Channel_5_Wb_1.csv", 55, 5, 2, 15, 17,1)
-# mbpf200kpa = data_imp("data/HPPC/230309_MBPF_Investigation_200kpa_11_0042_Channel_6_Wb_1.csv", "data/PressureData/200kpa_100kpa_Pressure_data.csv", [0.128, 0.036])
-# mbpf100kpa = data_imp("data/HPPC/230315_MBPF_Investigation_100kpa_11_0041_Channel_6_Wb_1.csv", "data/PressureData/200kpa_100kpa_Pressure_data.csv", [0.128, 0.036])
-# mbpf25kpa_P = data_imp("data/HPPC/230320_MBPF_Investigation_25kpa_11_0043_Channel_6_Wb_1.csv","data/PressureData/230320_MBPF_Investigation_11_0043_25kpa.csv", [0.128, 0.036])
-# mbpf40kpa_P = data_imp("data/HPPC/230320_MBPF_Investigation_40kpa_11_0048_Channel_6_Wb_1.csv","data/PressureData/230321_PressureTest_11_0048.csv", [0.128, 0.036])
-# mbpf130kpa_P = data_imp("data/HPPC/230320_MBPF_Investigation_130kpa_11_0044_Channel_5_Wb_1.csv","data/PressureData/230321_PressureTest_11_0044.csv", [0.128, 0.036])
-
+mbpf200kpa = data_import_csv("data/HPPC/230309_MBPF_Investigation_200kpa_11_0042_Channel_6_Wb_1.csv")
 mbpf25kpa = data_import_csv("data/HPPC/230320_MBPF_Investigation_25kpa_11_0043_Channel_6_Wb_1.csv")
 mbpf40kpa = data_import_csv("data/HPPC/230320_MBPF_Investigation_40kpa_11_0048_Channel_6_Wb_1.csv")
 mbpf130kpa = data_import_csv("data/HPPC/230320_MBPF_Investigation_130kpa_11_0044_Channel_5_Wb_1.csv")
@@ -43,7 +37,7 @@ dcir_130kpa_1 = HPPC(mbpf130kpa, 10, 1, 20, 22, 25, 6, 13)
 # ------------------- HPPC Pulse Functions ---------------------------------
 # Filters HPPC data based on a specific SOC point, currently must be a multiple of the SOC soc_increment
 
-soc = 0.5
+soc = 1
 celldim = [0.128, 0.036]
 
 # mbpf200kpa_1 = hppc_fun(mbpf200kpa, soc*100, 5, 1, 17, 19, 1)
@@ -52,84 +46,118 @@ mbpf25kpa_1 = hppc_fun(mbpf25kpa, soc*100, 10, 1, 17, 19, 1)
 mbpf40kpa_1 = hppc_fun(mbpf40kpa, soc*100, 10, 1, 20, 22, 1)
 mbpf130kpa_1 = hppc_fun(mbpf130kpa, soc*100, 10, 1, 20, 22, 1)
 
-P_25kpa = pres_avg("data/PressureData/230320_MBPF_Investigation_11_0043_25kpa.csv",mbpf25kpa_1,celldim)
-P_40kpa = pres_avg("data/PressureData/230321_PressureTest_11_0048.csv",mbpf40kpa_1,celldim)
-P_130kpa = pres_avg("data/PressureData/230321_PressureTest_11_0044.csv",mbpf130kpa_1,celldim)
+dig=0
+P_25kpa = pres_avg("data/PressureData/230320_MBPF_Investigation_11_0043_25kpa.csv",mbpf25kpa_1,celldim,dig)
+P_40kpa = pres_avg("data/PressureData/230321_PressureTest_11_0048.csv",mbpf40kpa_1,celldim,dig)
+P_130kpa = pres_avg("data/PressureData/230321_PressureTest_11_0044.csv",mbpf130kpa_1,celldim,dig)
 
 
-# ----------------- Converting voltage to Float64 ----------------------------
-# Only needed if XLSX is imported
-
-# mbpf200kpa_1."Voltage(V)" = convert(Array{Float64}, mbpf200kpa_1."Voltage(V)")
-# mbpf200kpa_21."Voltage(V)" = convert(Array{Float64}, mbpf200kpa_21."Voltage(V)")
-# mbpf100kpa_1."Voltage(V)" = convert(Array{Float64}, mbpf100kpa_1."Voltage(V)")
-# mbpf100kpa_21."Voltage(V)" = convert(Array{Float64}, mbpf100kpa_21."Voltage(V)")
-# mbpf25kpa_1."Voltage(V)" = convert(Array{Float64}, mbpf25kpa_1."Voltage(V)")
-# mbpf40kpa_1."Voltage(V)" = convert(Array{Float64}, mbpf40kpa_1."Voltage(V)")
-# mbpf130kpa_1."Voltage(V)" = convert(Array{Float64}, mbpf130kpa_1."Voltage(V)")
-
-soc90 = @pgf GroupPlot(
+soc_plot = @pgf GroupPlot(
+    
     {
-        # group_style = {       
-
-        #     group_size="2 by 1"
-
-        # },
-
+        group_style =
+        {
+            # group_size="2 by 1",
+            xticklabels_at="edge bottom",
+            # yticklabels_at="edge left",
+            # legend_pos= "south west"
+        },
         height = "10cm", width = "15cm",
-        legend_pos= "south east",
-        # legend_style =
-        # {
-        #     at = Coordinate(1.1, 0.5),
-        #     anchor = "east",
-        #     legend_columns = 1
-        # },
+        # legend_pos= "south west"
 
     },
 
     {
+        xlabel="Time [s]",
         ylabel="Voltage [V]",
-        xlabel="State-of-Charge ["*L"\%"*"]",
-        xmin = 0, 
+        xmin = -0.01, 
         xmax = 100,
+        # ymax = 4.4,
+        # ymin = 2.8,
         xtick = 0:10:100,
-    #     scaled_y_ticks = false, 
-    #     yticklabel_style={
-    #         precision=5
-    # },
+        legend_pos= "south east"
     },
 
     Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = mbpf40kpa_1[:,"Test_Time(s)"], y = mbpf40kpa_1[:,"Voltage(V)"])),
-    LegendEntry("P_40kpa"),
+    LegendEntry(string(P_40kpa)*" kPa"),
     Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = mbpf25kpa_1[:,"Test_Time(s)"], y = mbpf25kpa_1[:,"Voltage(V)"])),
-    LegendEntry("P_25kpa"),
+    LegendEntry(string(P_25kpa)*" kPa"),
     Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = mbpf130kpa_1[:,"Test_Time(s)"], y = mbpf130kpa_1[:,"Voltage(V)"])),
-    LegendEntry("P_130kpa"),
-
-
-    # {
-    #     # ylabel="Power [W]",
-    #     xlabel="State-of-Charge ["*L"\%"*"]",
-    #     xmin = 0, 
-    #     xmax = 100,
-    #     xtick = 0:10:100,
-    # #     scaled_y_ticks = false, 
-    # #     yticklabel_style={
-    # #         precision=5
-    # # },
-    # },
-
-    # Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = h4["5C"][x][z][:,"SOC"], y = h4["5C"][x][z][:,"Average Power (W)"])),
-    # LegendEntry("5°C"),
-    # Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = h4["15C"][x][z][:,"SOC"], y = h4["15C"][x][z][:,"Average Power (W)"])),
-    # LegendEntry("15°C"),
-    # Plot({color = Ϟ[7], "thick", only_marks}, Table({x = "x", y = "y"}, x = h4["25C"][x][z][:,"SOC"], y = h4["25C"][x][z][:,"Average Power (W)"])),
-    # LegendEntry("25°C"),
-    # Plot({color = Ϟ[8], "thick", only_marks}, Table({x = "x", y = "y"}, x = h4["35C"][x][z][:,"SOC"], y = h4["35C"][x][z][:,"Average Power (W)"])),
-    # LegendEntry("35°C"),
-    # Plot({color = Ϟ[10], "thick", only_marks}, Table({x = "x", y = "y"}, x = h4["45C"][x][z][:,"SOC"], y = h4["45C"][x][z][:,"Average Power (W)"])),
-    # LegendEntry("45°C"),
- 
- 
- 
+    LegendEntry(string(P_130kpa)*" kPa")
 )
+
+# pgfsave("/Users/KatieLukow/Documents/OBMS23/Figures/soc20.pdf",soc_plot)
+
+Ω_plot = @pgf GroupPlot(
+    
+    {
+        group_style =
+        {
+            # group_size="2 by 1",
+            xticklabels_at="edge bottom",
+            # yticklabels_at="edge left",
+            # legend_pos= "north west"
+        },
+        height = "10cm", width = "15cm",
+        legend_pos= "north east"
+
+    },
+
+    {
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Resistance [mΩ]",
+        xmin = 0, 
+        xmax = 100,
+        ymax = 15,
+        ymin = 10,
+        xtick = 0:10:100,
+        legend_pos= "south east"
+    },
+
+    Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = dcir_40kpa_1["Discharge"][:,"SOC"], y = dcir_40kpa_1["Discharge"][:,"Resistance"].*1000)),
+    LegendEntry(string(P_40kpa)*" kPa"),
+    Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = dcir_25kpa_1["Discharge"][:,"SOC"], y = dcir_25kpa_1["Discharge"][:,"Resistance"].*1000)),
+    LegendEntry(string(P_25kpa)*" kPa"),
+    Plot({color = Ϟ[7], "thick", only_marks}, Table({x = "x", y = "y"}, x = dcir_130kpa_1["Discharge"][:,"SOC"], y = dcir_130kpa_1["Discharge"][:,"Resistance"].*1000)),
+    LegendEntry(string(P_130kpa)*" kPa"),
+
+)
+
+# pgfsave("/Users/KatieLukow/Documents/OBMS23/Figures/dcir.pdf",Ω_plot)
+
+P_plot = @pgf GroupPlot(
+    
+    {
+        group_style =
+        {
+            # group_size="2 by 1",
+            xticklabels_at="edge bottom",
+            # yticklabels_at="edge left",
+            # legend_pos= "north west"
+        },
+        height = "10cm", width = "15cm",
+        # legend_pos= "north east"
+
+    },
+
+    {
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Maximum Power [W]",
+        xmin = 10, 
+        xmax = 100,
+        # ymax = 15,
+        # ymin = 10,
+        xtick = 0:10:100,
+        legend_pos= "south east"
+    },
+
+    Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = dcir_40kpa_1["Discharge"][:,"SOC"], y = abs.(dcir_40kpa_1["Discharge"][:,"Max Power (W)"]))),
+    LegendEntry(string(P_40kpa)*" kPa"),
+    Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = dcir_25kpa_1["Discharge"][:,"SOC"], y = abs.(dcir_25kpa_1["Discharge"][:,"Max Power (W)"]))),
+    LegendEntry(string(P_25kpa)*" kPa"),
+    Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = dcir_130kpa_1["Discharge"][:,"SOC"], y = abs.(dcir_130kpa_1["Discharge"][:,"Max Power (W)"]))),
+    LegendEntry(string(P_130kpa)*" kPa"),
+
+)
+
+# pgfsave("/Users/KatieLukow/Documents/OBMS23/Figures/maxpower.pdf",P_plot)
