@@ -3,7 +3,7 @@ module PIECM
 using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, XLSX, Statistics 
 using StatsBase: L2dist
  
-export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv_calc, sqrzeros, HPPC
+export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv_calc, sqrzeros, HPPC, hppc_fun
 export ecm_discrete, costfunction
 
 # --------------- Fitting data import and calculations -----------------------------
@@ -27,7 +27,7 @@ function pressurematch(cell_data, pressure_data, A_cell)
     pressure_data.Pressure = pressure_data.Force ./ A_cell # Convert force to pressure (Pa)
     # p_updated = innerjoin(cell_data, pressure_data, on = :Date_Time) # Match date times
     # return select(p_updated, "Date_Time", "Step_Index", "Cycle_Index", "TC_Counter1", "TC_Counter2", "Current(A)", "Voltage(V)", "Pressure", "Discharge_Capacity(Ah)", "Charge_Capacity(Ah)")
-	return innerjoin(cell_data, pressure_data, on = :Date_Time)
+	return leftjoin(cell_data, pressure_data, on = :Date_Time)
 end
 
 function pocv_calc(df, POCV_discharge_step, POCV_charge_step, OCV_steps)
@@ -134,7 +134,7 @@ function HPPC(data, soc_increment, cycle, dis_pulse_step, char_pulse_step, dis_s
 
 	γ = Dict("Charge" => ∇_charge, "Discharge" => ∇_discharge)
 
-	return γ, DCIR
+	return γ
 end
 
 function hppc_calc(dataframe, i, init_V)
@@ -157,6 +157,14 @@ function hppc_calc(dataframe, i, init_V)
 	return [r, P_avg, t[1], t[2], t[3], t[4]]
 end
 
+function hppc_fun(pd, soc, soc_step, pulse_rate, dis_step, char_step, cycle_index)
+    
+    hppc = hppc_pulse(pd, soc, soc_step, pulse_rate, dis_step, char_step)
+    hppc = filter(row -> row."Cycle_Index" == cycle_index, hppc)
+    hppc."Test_Time(s)" .-= hppc."Test_Time(s)"[1]
+
+    return hppc
+end
 # ----------------------------------
 # x = [Rᵢ, Cᵢ, R₀]
 # n_RC = number of RC pairs
