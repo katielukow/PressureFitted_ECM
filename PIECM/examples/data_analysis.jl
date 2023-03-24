@@ -37,7 +37,7 @@ dcir_130kpa_1 = HPPC(mbpf130kpa, 10, 1, 20, 22, 25, 6, 13)
 # ------------------- HPPC Pulse Functions ---------------------------------
 # Filters HPPC data based on a specific SOC point, currently must be a multiple of the SOC soc_increment
 
-soc = 1
+soc = .1
 celldim = [0.128, 0.036]
 
 # mbpf200kpa_1 = hppc_fun(mbpf200kpa, soc*100, 5, 1, 17, 19, 1)
@@ -79,14 +79,14 @@ soc_plot = @pgf GroupPlot(
     },
 
     Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = mbpf40kpa_1[:,"Test_Time(s)"], y = mbpf40kpa_1[:,"Voltage(V)"])),
-    LegendEntry(string(P_40kpa)*" kPa"),
+    LegendEntry("47 kPa"),
     Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = mbpf25kpa_1[:,"Test_Time(s)"], y = mbpf25kpa_1[:,"Voltage(V)"])),
-    LegendEntry(string(P_25kpa)*" kPa"),
+    LegendEntry("139 kPa"),
     Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = mbpf130kpa_1[:,"Test_Time(s)"], y = mbpf130kpa_1[:,"Voltage(V)"])),
-    LegendEntry(string(P_130kpa)*" kPa")
+    LegendEntry("211 kPa")
 )
 
-# pgfsave("/Users/KatieLukow/Documents/OBMS23/Figures/soc20.pdf",soc_plot)
+pgfsave("/Users/KatieLukow/Documents/OBMS23/Figures/soc10.pdf",soc_plot)
 
 Ω_plot = @pgf GroupPlot(
     
@@ -107,7 +107,7 @@ soc_plot = @pgf GroupPlot(
         xlabel="State of Charge ["*L"\%"*"]",
         ylabel="Resistance [mΩ]",
         xmin = 0, 
-        xmax = 100,
+        xmax = 110,
         ymax = 15,
         ymin = 10,
         xtick = 0:10:100,
@@ -115,7 +115,7 @@ soc_plot = @pgf GroupPlot(
     },
 
     Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = dcir_40kpa_1["Discharge"][:,"SOC"], y = dcir_40kpa_1["Discharge"][:,"Resistance"].*1000)),
-    LegendEntry(string(P_40kpa)*" kPa"),
+    LegendEntry("47.0 kPa"),
     Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = dcir_25kpa_1["Discharge"][:,"SOC"], y = dcir_25kpa_1["Discharge"][:,"Resistance"].*1000)),
     LegendEntry(string(P_25kpa)*" kPa"),
     Plot({color = Ϟ[7], "thick", only_marks}, Table({x = "x", y = "y"}, x = dcir_130kpa_1["Discharge"][:,"SOC"], y = dcir_130kpa_1["Discharge"][:,"Resistance"].*1000)),
