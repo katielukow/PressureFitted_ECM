@@ -4,38 +4,19 @@ plotly()
 Ϟ = distinguishable_colors(10)
 # gr() 
 
-# Data 
-
-function ocv_fun(ocv_file, char, dis, ocv_points)
-    ocvd = data_import_csv(ocv_file)
-    return pocv_calc(ocvd, char, dis, ocv_points)
-end
-
-# mbpf200kpa = data_import_csv("data/HPPC/230309_MBPF_Investigation_200kpa_11_0042_Channel_6_Wb_1.csv")
+# Fitting Data 
 mbpf25kpa = data_import_csv("data/HPPC/230320_MBPF_Investigation_25kpa_11_0043_Channel_6_Wb_1.csv")
 mbpf40kpa = data_import_csv("data/HPPC/230320_MBPF_Investigation_40kpa_11_0048_Channel_6_Wb_1.csv")
 mbpf130kpa = data_import_csv("data/HPPC/230320_MBPF_Investigation_130kpa_11_0044_Channel_5_Wb_1.csv")
-ocv = ocv_fun("data/OCV/220310_BTC_POCV_GITT_Mel_SLPB7336128HV_1_25C_Channel_5_Wb_1.csv", 5, 8, 1000)
-
+ocv = pocv("data/OCV/220310_BTC_POCV_GITT_Mel_SLPB7336128HV_1_25C_Channel_5_Wb_1.csv", 5, 8, 1000)
 
 soc = 1
-
-x130 = [5.227648703
-1.570167521
--6.794674029
-1.956464291
-54.31892721
-811149.0637
-0.008436201]
-
-
-# mbpf200kpa_1 = hppc_fun(mbpf200kpa, soc*100, 5, 1, 17, 19, 1)
-# mbpf100kpa_1 = hppc_fun(mbpf100kpa, soc*100, 5, 1, 17, 19, 1)
-# mbpf25kpa_1 = hppc_fun(mbpf25kpa, soc*100, 10, 1, 17, 19, 1)
+mbpf25kpa_1 = hppc_fun(mbpf25kpa, soc*100, 10, 1, 17, 19, 1)
 mbpf40kpa_1 = hppc_fun(mbpf40kpa, soc*100, 10, 1, 20, 22, 1)
 mbpf130kpa_1 = hppc_fun(mbpf130kpa, soc*100, 10, 1, 20, 22, 1)
 
 
+# Optimisation Parameters
 data = mbpf40kpa_1
 uᵢ = data."Current(A)"
 Δ = data."Test_Time(s)"
@@ -46,17 +27,21 @@ costfunction_closed1 = κ->costfunction(κ, 1, uᵢ, Δ, η, Q, ocv, soc, data)
 costfunction_closed2 = κ->costfunction(κ, 2, uᵢ, Δ, η, Q, ocv, soc, data) 
 costfunction_closed3 = κ->costfunction(κ, 3, uᵢ, Δ, η, Q, ocv, soc, data) 
 
-#-----------------------Forward Model Testing--------------------------
-x2 = [0.010, 0.008, 3000, 3500, 0.008]
-x3 = [0.010, 0.010, 0.010, 3000, 3000, 3000, 0.008]
-x1 = [0.008, 3000, 0.012]
+#-----------------------Initial Conditions--------------------------
+x1 = [0.010, 3000, 0.010]
+x2 = [0.010, 0.010, 3000, 3000, 0.010]
+x3 = [0.010, 0.010, 0.010, 3000, 3000, 3000, 0.010]
 
-# ---------------------------Optimising-----------------------------
+
+# ---------------------------Optimisation-----------------------------
 
 res = optimize(costfunction_closed3, x3, iterations = 10000)
 x = Optim.minimizer(res)
 v = ecm_discrete(x, 3, data."Current(A)", data."Test_Time(s)", 0.9997, 3.7, ocv, soc);
 v130 = ecm_discrete(x130, 3, data."Current(A)", data."Test_Time(s)", 0.9997, 3.7, ocv, soc)
+
+
+# ----------------------Results Plotting--------------------------------
 
 
 # P_plot = @pgf GroupPlot(

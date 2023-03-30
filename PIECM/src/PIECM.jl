@@ -3,16 +3,16 @@ module PIECM
 using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, XLSX, Statistics 
 using StatsBase: L2dist
  
-export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv_calc, sqrzeros, HPPC, hppc_fun
+export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv, sqrzeros, HPPC, hppc_fun
 export ecm_discrete, costfunction
 
-# --------------- Fitting data import and calculations -----------------------------
+# --------------- Fitting data import and filtering -----------------------------
 
 sqrzeros(A) = zeros(A,A)
 data_import_csv(file_name) = CSV.read(file_name, DataFrame)
 data_import_excel(file_name, sheet_name) = DataFrame(XLSX.readtable(file_name, sheet_name))
 
-# Imports pressure data and matches date format to the Arbin format
+# Imports pressure data as a DataFrame and matches date format to yyyy/mm/dd HH:MM:SS
 function pressure_dateformat_fix(file_name)
     data = CSV.read(file_name, DataFrame)
     data.Time = Dates.format.(data.Time, "HH:MM:SS")
@@ -25,51 +25,49 @@ end
 # Convert force to pressure and match date-time 
 function pressurematch(cell_data, pressure_data, A_cell)
     pressure_data.Pressure = pressure_data.Force ./ A_cell # Convert force to pressure (Pa)
-    # p_updated = innerjoin(cell_data, pressure_data, on = :Date_Time) # Match date times
-    # return select(p_updated, "Date_Time", "Step_Index", "Cycle_Index", "TC_Counter1", "TC_Counter2", "Current(A)", "Voltage(V)", "Pressure", "Discharge_Capacity(Ah)", "Charge_Capacity(Ah)")
 	return leftjoin(cell_data, pressure_data, on = :Date_Time)
 end
 
-function pocv_calc(df, POCV_discharge_step, POCV_charge_step, OCV_steps)
+function pocv(file_name, POCV_discharge_step, POCV_charge_step, OCV_steps)
+	df = data_import_csv(file_name)
 
-	POCVc_updated = Array{Float64}(undef,(OCV_steps+1),2)
-	POCVd_updated = Array{Float64}(undef,(OCV_steps+1),3)
-	step_size = 100 / OCV_steps
+	POCVc = Array{Float64}(undef,(OCV_steps+1),2)
+	POCVd = Array{Float64}(undef,(OCV_steps+1),3)
 		
 	# Select relavent data
-	dis_temp = select(filter(row -> row."Step_Index" == POCV_discharge_step, df), "Voltage(V)", "Discharge_Capacity(Ah)", "Discharge_Energy(Wh)")
-	char_temp = select(filter(row -> row."Step_Index" == POCV_charge_step, df), "Voltage(V)", "Charge_Capacity(Ah)", "Charge_Energy(Wh)")
+	dis = select(filter(row -> row."Step_Index" == POCV_discharge_step, df), "Voltage(V)", "Discharge_Capacity(Ah)", "Discharge_Energy(Wh)")
+	char = select(filter(row -> row."Step_Index" == POCV_charge_step, df), "Voltage(V)", "Charge_Capacity(Ah)", "Charge_Energy(Wh)")
 
 	# Normalize capacities 
-	dis_temp[:,"Discharge_Capacity(Ah)"] .-= dis_temp[1,"Discharge_Capacity(Ah)"]
-	dis_temp[:,"Discharge_Energy(Wh)"] .-= dis_temp[1,"Discharge_Energy(Wh)"]
-	char_temp[:,"Charge_Capacity(Ah)"] .-= char_temp[1,"Charge_Capacity(Ah)"]
+	dis[:,"Discharge_Capacity(Ah)"] .-= dis[1,"Discharge_Capacity(Ah)"]
+	dis[:,"Discharge_Energy(Wh)"] .-= dis[1,"Discharge_Energy(Wh)"]
+	char[:,"Charge_Capacity(Ah)"] .-= char[1,"Charge_Capacity(Ah)"]
 
 	# Calculate and append SOC to the relavent dataframe
-	dis_temp[!, "SOC"] = 100 .- dis_temp[:,"Discharge_Capacity(Ah)"] ./ dis_temp[end,"Discharge_Capacity(Ah)"] .* 100
-	char_temp[!, "SOC"] = char_temp[:,"Charge_Capacity(Ah)"] ./ char_temp[end,"Charge_Capacity(Ah)"] .* 100
+	dis[!, "SOC"] = 100 .- dis[:,"Discharge_Capacity(Ah)"] ./ dis[end,"Discharge_Capacity(Ah)"] .* 100
+	char[!, "SOC"] = char[:,"Charge_Capacity(Ah)"] ./ char[end,"Charge_Capacity(Ah)"] .* 100
 
 	# Select normalized data points for usable SOC table
 	j = 1
-	for i in 0:step_size:100 # iterating through SOC points
-		min_c = findmin(abs.(char_temp[:,"SOC"] .- i))
-		POCVc_updated[j,1] = round(char_temp[!, "SOC"][min_c[2]],digits=1)
-		POCVc_updated[j,2] = char_temp[min_c[2],"Voltage(V)"]
+	for i in 0:(100 / OCV_steps):100 # iterating through SOC points
+		min_c = findmin(abs.(char[:,"SOC"] .- i))
+		POCVc[j,1] = round(char[!, "SOC"][min_c[2]],digits=1)
+		POCVc[j,2] = char[min_c[2],"Voltage(V)"]
 
-		min_d = findmin(abs.(dis_temp[:,"SOC"] .- i))
-		POCVd_updated[j,1] = round(dis_temp[!, "SOC"][min_d[2]],digits=1)
-		POCVd_updated[j,2] = dis_temp[min_d[2],"Voltage(V)"]
-		POCVd_updated[j,3] = dis_temp[min_d[2],"Discharge_Energy(Wh)"]
+		min_d = findmin(abs.(dis[:,"SOC"] .- i))
+		POCVd[j,1] = round(dis[!, "SOC"][min_d[2]],digits=1)
+		POCVd[j,2] = dis[min_d[2],"Voltage(V)"]
+		POCVd[j,3] = dis[min_d[2],"Discharge_Energy(Wh)"]
 
 		j += 1
 	end
 
 	# Find average between charge and discharge curves
-	POCV_SOC = ((POCVd_updated[:,1] .+ POCVc_updated[:,1]) ./ 2) ./ 100
-	POCV_V = (POCVd_updated[:,2] .+ POCVc_updated[:,2]) ./ 2
+	POCV_SOC = ((POCVd[:,1] .+ POCVc[:,1]) ./ 2) ./ 100
+	POCV_V = (POCVd[:,2] .+ POCVc[:,2]) ./ 2
 
 
-	return DataFrame(State_of_Charge=POCV_SOC, Voltage=POCV_V, DisVoltage=POCVd_updated[:,2], DisSOC=POCVd_updated[:,1], CharVoltage=POCVc_updated[:,2], CharSOC=POCVc_updated[:,1], DisEnergy=POCVd_updated[:,3])
+	return DataFrame(State_of_Charge=POCV_SOC, Voltage=POCV_V,DischargeVoltage=POCVd[:,2],ChargeVoltage=POCVc[:,2],DischargeEnergy=POCVd[:,3])
 end
 
 function hppc_pulse(data, soc, soc_increment, pulse_rate, dis_pulse_step, char_pulse_step)
