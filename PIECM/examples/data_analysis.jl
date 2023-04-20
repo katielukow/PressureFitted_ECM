@@ -9,7 +9,9 @@ function data_imp(hppc_file, pres_file, Acell)
     cd = data_import_csv(hppc_file)
     A_cell = Acell[1] * Acell[2]
     pd = pressure_dateformat_fix(pres_file)
-    return pressurematch(cd, pd, A_cell)
+    data = pressurematch(cd, pd, A_cell)
+    
+    return sort!(data,["Date_Time"])
 
 end
 
@@ -30,10 +32,9 @@ dcir_25kpa_1 = HPPC(mbpf25kpa, 10, 1, 17, 19, 22, 6, 13)
 dcir_40kpa_1 = HPPC(mbpf40kpa, 10, 1, 20, 22, 25, 6, 13)
 dcir_130kpa_1 = HPPC(mbpf130kpa, 10, 1, 20, 22, 25, 6, 13)
 
-
 # ------------------- HPPC Pulse Functions ---------------------------------
 # Filters HPPC data based on a specific SOC point, currently must be a multiple of the SOC soc_increment
-soc = .1
+soc = 1
 celldim = [0.128, 0.036]
 
 mbpf25kpa_1 = hppc_fun(mbpf25kpa, soc*100, 10, 1, 17, 19, 1)
@@ -45,4 +46,85 @@ P_25kpa = pres_avg("data/PressureData/230320_MBPF_Investigation_11_0043_25kpa.cs
 P_40kpa = pres_avg("data/PressureData/230321_PressureTest_11_0048.csv",mbpf40kpa_1,celldim,dig)
 P_130kpa = pres_avg("data/PressureData/230321_PressureTest_11_0044.csv",mbpf130kpa_1,celldim,dig)
 
+
+# ---------------- Pressure Plotting --------------------------------------
+P25kpa = data_imp("data/HPPC/230320_MBPF_Investigation_25kpa_11_0043_Channel_6_Wb_1.csv","data/PressureData/230320_MBPF_Investigation_11_0043_25kpa.csv", celldim)
+P40kpa = data_imp("data/HPPC/230320_MBPF_Investigation_40kpa_11_0048_Channel_6_Wb_1.csv", "data/PressureData/230321_PressureTest_11_0048.csv", celldim)
+P130kpa = data_imp("data/HPPC/230320_MBPF_Investigation_130kpa_11_0044_Channel_5_Wb_1.csv","data/PressureData/230321_PressureTest_11_0044.csv",celldim)
+
+# P25kpa = pressure_dateformat_fix("data/PressureData/230320_MBPF_Investigation_11_0043_25kpa.csv")
+# P40kpa = pressure_dateformat_fix("data/PressureData/230321_PressureTest_11_0048.csv")
+# P130kpa = pressure_dateformat_fix("data/PressureData/230321_PressureTest_11_0044.csv")
+
+char_step = 10
+dis_step = 6
+
+P25kpa_charge = sort!(filter(row -> row.Step_Index == dis_step, P25kpa)) 
+P40kpa_charge = sort!(filter(row -> row.Step_Index == dis_step, P40kpa)) 
+P130kpa_charge = sort!(filter(row -> row.Step_Index == dis_step, P130kpa)) 
+
+P25kpa_norm = P25kpa_charge[:,"Pressure"] ./ P25kpa_charge[1,"Pressure"]
+P40kpa_norm = P40kpa_charge[:,"Pressure"] ./ P40kpa_charge[3,"Pressure"]
+P130kpa_norm = P130kpa_charge[:,"Pressure"] ./ P130kpa_charge[1,"Pressure"]
+
+P25kpa_norm2 = P25kpa_charge[:,"Pressure"] .- P25kpa_charge[1,"Pressure"]
+P40kpa_norm2 = P40kpa_charge[:,"Pressure"] .- P40kpa_charge[3,"Pressure"]
+P130kpa_norm2 = P130kpa_charge[:,"Pressure"] .- P130kpa_charge[1,"Pressure"]
+
+scatter(P25kpa_charge[:,:Pressure], label = string(P_25kpa))
+scatter!(P40kpa_charge[:,:Pressure], label = string(P_40kpa))
+scatter!(P130kpa_charge[:,:Pressure], label = string(P_130kpa))
+
+scatter!(twinx(), P25kpa_charge[:,"Aux_Temperature_1(C)"])
+# function presdata(data, Pdata, step)
+#     cdata = filter(row -> row.Step_Index == step, data)
+    
+# end 
+
+
+Ω_plot = @pgf GroupPlot(
+
+    {
+        group_style =
+        {
+            # group_size="2 by 1",
+            xticklabels_at="edge bottom",
+            # yticklabels_at="edge left",
+            # legend_pos= "north west"
+        },
+        height = "10cm", width = "15cm",
+        legend_pos= "south east",
+        # legend_style =
+        # {
+        #     at = Coordinate(1.1, 0.5),
+        #     anchor = "east",
+        #     legend_columns = 1
+        # },
+        legend_pos= "north east"
+
+    },
+
+    {
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Resistance [mΩ]",
+        xmin = 0, 
+        xmax = 100,
+        ymax = 15,
+        ymin = 10,
+        xtick = 0:10:100,
+    #     scaled_y_ticks = false, 
+    #     yticklabel_style={
+    #         precision=5
+    # },
+        legend_pos= "south east"
+    },
+
+    Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = dcir_40kpa_1["Discharge"][:,"SOC"], y = dcir_40kpa_1["Discharge"][:,"Resistance"].*1000)),
+    LegendEntry("47 kPa"),
+    Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = dcir_25kpa_1["Discharge"][:,"SOC"], y = dcir_25kpa_1["Discharge"][:,"Resistance"].*1000)),
+    LegendEntry("139 kPa"),
+    Plot({color = Ϟ[7], "thick", only_marks}, Table({x = "x", y = "y"}, x = dcir_130kpa_1["Discharge"][:,"SOC"], y = dcir_130kpa_1["Discharge"][:,"Resistance"].*1000)),
+    LegendEntry("211 kPa"),
+
+)
 
