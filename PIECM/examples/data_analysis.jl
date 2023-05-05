@@ -71,11 +71,11 @@ P25kpa_norm2 = P25kpa_charge[:,"Pressure"] .- P25kpa_charge[1,"Pressure"]
 P40kpa_norm2 = P40kpa_charge[:,"Pressure"] .- P40kpa_charge[3,"Pressure"]
 P130kpa_norm2 = P130kpa_charge[:,"Pressure"] .- P130kpa_charge[1,"Pressure"]
 
-scatter(P25kpa_charge[:,:Pressure], label = string(P_25kpa))
-scatter!(P40kpa_charge[:,:Pressure], label = string(P_40kpa))
+scatter(P40kpa_charge[:,:Pressure], label = string(P_25kpa))
+scatter!(P25kpa_charge[:,:Pressure], label = string(P_40kpa))
 scatter!(P130kpa_charge[:,:Pressure], label = string(P_130kpa))
 
-scatter!(twinx(), P25kpa_charge[:,"Aux_Temperature_1(C)"])
+scatter!(twinx(), P130kpa_charge[:,"Voltage(V)"])
 # function presdata(data, Pdata, step)
 #     cdata = filter(row -> row.Step_Index == step, data)
     
@@ -125,6 +125,189 @@ scatter!(twinx(), P25kpa_charge[:,"Aux_Temperature_1(C)"])
     LegendEntry("139 kPa"),
     Plot({color = Ϟ[7], "thick", only_marks}, Table({x = "x", y = "y"}, x = dcir_130kpa_1["Discharge"][:,"SOC"], y = dcir_130kpa_1["Discharge"][:,"Resistance"].*1000)),
     LegendEntry("211 kPa"),
+
+)
+Pwr_plot = @pgf GroupPlot(
+
+    {
+        group_style =
+        {
+            # group_size="2 by 1",
+            xticklabels_at="edge bottom",
+            # yticklabels_at="edge left",
+            # legend_pos= "north west"
+        },
+        height = "10cm", width = "15cm",
+        legend_pos= "south east",
+        # legend_style =
+        # {
+        #     at = Coordinate(1.1, 0.5),
+        #     anchor = "east",
+        #     legend_columns = 1
+        # },
+        legend_pos= "north east"
+
+    },
+
+    {
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Max Power [W]",
+        xmin = 10, 
+        xmax = 100,
+        # ymax = 15,
+        # ymin = 10,
+        xtick = 0:10:100,
+    #     scaled_y_ticks = false, 
+    #     yticklabel_style={
+    #         precision=5
+    # },
+        legend_pos= "south east"
+    },
+
+    Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = dcir_40kpa_1["Discharge"][:,"SOC"], y = -dcir_40kpa_1["Discharge"][:,"Max Power (W)"])),
+    LegendEntry("47 kPa"),
+    Plot({color = Ϟ[6], "thick", mark = "*"}, Table({x = "x", y = "y"}, x = dcir_25kpa_1["Discharge"][:,"SOC"], y = -dcir_25kpa_1["Discharge"][:,"Max Power (W)"])),
+    LegendEntry("139 kPa"),
+    Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = dcir_130kpa_1["Discharge"][:,"SOC"], y = -dcir_130kpa_1["Discharge"][:,"Max Power (W)"])),
+    LegendEntry("211 kPa"),
+
+)
+
+P_plot = @pgf GroupPlot(
+
+    {
+        group_style =
+        {
+            # group_size="2 by 1",
+            xticklabels_at="edge bottom",
+            # yticklabels_at="edge left",
+            # legend_pos= "north west"
+        },
+        height = "10cm", width = "15cm",
+        legend_pos= "south east",
+        # legend_style =
+        # {
+        #     at = Coordinate(1.1, 0.5),
+        #     anchor = "east",
+        #     legend_columns = 1
+        # },
+        legend_pos= "north east"
+
+    },
+
+    {
+        xlabel="Time [s]",
+        ylabel="Pressure [kPa]",
+        xmin = 0, 
+        # xmax = 100,
+        # ymax = 15,
+        ymin = 0,
+        # xtick = 0:10:100,
+    #     scaled_y_ticks = false, 
+    #     yticklabel_style={
+    #         precision=5
+    # },
+        legend_pos= "east"
+    },
+
+    Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = P40kpa_charge[:,"Step_Time(s)"], y = P40kpa_charge[:,:Pressure]/1000)),
+    LegendEntry("47 kPa"),
+    Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = P25kpa_charge[:,"Step_Time(s)"], y = P25kpa_charge[:,:Pressure]/1000)),
+    LegendEntry("139 kPa"),
+    Plot({color = Ϟ[7], "thick", only_marks}, Table({x = "x", y = "y"}, x = P130kpa_charge[:,"Step_Time(s)"], y = P130kpa_charge[:,:Pressure]/1000)),
+    LegendEntry("211 kPa"),
+
+)
+
+PT_plot = @pgf GroupPlot(
+
+    {
+        group_style =
+        {
+            group_size="3 by 1",
+            xticklabels_at="edge bottom",
+            horizontal_sep="2cm"
+            # yticklabels_at="edge left",
+            # legend_pos= "north west"
+        },
+        height = "10cm", width = "15cm",
+        legend_pos= "south east",
+        # legend_style =
+        # {
+        #     at = Coordinate(1.1, 0.5),
+        #     anchor = "east",
+        #     legend_columns = 1
+        # },
+        legend_pos= "north east"
+
+    },
+
+    {
+        xlabel="Time [s]",
+        ylabel="Current [A]",
+        xmin = 0, 
+        # xmax = 100,
+        # ymax = 15,
+        # ymin = 0,
+        # xtick = 0:10:100,
+    #     scaled_y_ticks = false, 
+    #     yticklabel_style={
+    #         precision=5
+    # },
+        legend_pos= "south east"
+    },
+
+    Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = P25kpa_charge[:,"Step_Time(s)"], y = P25kpa_charge[:,"Current(A)"])),
+    LegendEntry("Current"),
+    Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = P25kpa_charge[:,"Step_Time(s)"], y = P25kpa_charge[:,"Voltage(V)"])),
+    LegendEntry("Voltage"),
+
+    {
+        xlabel="Time [s]",
+        ylabel="Pressure [kPa]",
+        xmin = 0, 
+        # xmax = 100,
+        # ymax = 15,
+        # ymin = 0,
+        # xtick = 0:10:100,
+    #     scaled_y_ticks = false, 
+    #     yticklabel_style={
+    #         precision=5
+    # },
+        legend_pos= "south east"
+    },
+
+    Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = P25kpa_charge[:,"Step_Time(s)"], y = P25kpa_charge[:,:Pressure]/1000)),
+    # LegendEntry("139 kPa"),
+    Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = P130kpa_charge[:,"Step_Time(s)"], y = P130kpa_charge[:,:Pressure]/1000)),
+    # LegendEntry("211 kPa"),
+    Plot({color = Ϟ[7], "thick", only_marks}, Table({x = "x", y = "y"}, x = P40kpa_charge[:,"Step_Time(s)"], y = P40kpa_charge[:,:Pressure]/1000)),
+    # LegendEntry("211 kPa"),
+
+
+    {
+        xlabel="Time [s]",
+        ylabel="Temperature [Celsius]",
+        xmin = 0, 
+        # xmax = 100,
+        # ymax = 15,
+        # ymin = 0,
+        # xtick = 0:10:100,
+    #     scaled_y_ticks = false, 
+    #     yticklabel_style={
+    #         precision=5
+    # },
+        legend_pos= "south east"
+    },
+
+    Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = P25kpa_charge[:,"Step_Time(s)"], y = P25kpa_charge[:,"Aux_Temperature_1(C)"])),
+    LegendEntry("139 kPa"),
+    Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = P130kpa_charge[:,"Step_Time(s)"], y = P130kpa_charge[:,"Aux_Temperature_1(C)"])),
+    LegendEntry("211 kPa"),
+    Plot({color = Ϟ[7], "thick", only_marks}, Table({x = "x", y = "y"}, x = P40kpa_charge[:,"Step_Time(s)"], y = P40kpa_charge[:,"Aux_Temperature_1(C)"])),
+    LegendEntry("47 kPa"),
+    # Plot({color = Ϟ[7], "thick", only_marks}, Table({x = "x", y = "y"}, x = P130kpa_charge[:,"Step_Time(s)"], y = P130kpa_charge[:,:Pressure]/1000)),
+    # LegendEntry("211 kPa"),
 
 )
 
