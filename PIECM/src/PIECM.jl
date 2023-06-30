@@ -4,12 +4,25 @@ using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, XLSX, Statistic
 using StatsBase: L2dist
  
 export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv, sqrzeros, HPPC, hppc_fun
-export ecm_discrete, costfunction
+export ecm_discrete, costfunction, HPPC_n
 
 # --------------- Fitting data import and filtering -----------------------------
 
 sqrzeros(A) = zeros(A,A)
-data_import_csv(file_name) = CSV.read(file_name, DataFrame)
+function data_import_csv(file_name, format) 
+	df = CSV.read(file_name, DataFrame)
+	if format == "new"
+		rename!(df,"Step Index" => "Step_Index")
+		rename!(df,"Cycle Index" => "Cycle_Index")
+		rename!(df,"Voltage (V)" => "Voltage(V)")
+		rename!(df,"Current (A)" => "Current(A)")
+		rename!(df,"Internal Resistance (Ohm)" => "Internal_Resistance(Ohm)")
+		rename!(df,"Discharge Capacity (Ah)" => "Discharge_Capacity(Ah)")
+		rename!(df,"Charge Capacity (Ah)" => "Charge_Capacity(Ah)")
+	end
+
+	return df
+end
 data_import_excel(file_name, sheet_name) = DataFrame(XLSX.readtable(file_name, sheet_name))
 
 # Imports pressure data as a DataFrame and matches date format to yyyy/mm/dd HH:MM:SS
@@ -79,6 +92,15 @@ function hppc_pulse(data, soc, soc_increment, pulse_rate, dis_pulse_step, char_p
 	return d[5:end,:]
 end
 
+function hppc_pulse(data, soc::Vector, soc_increment, pulse_rate, dis_pulse_step, char_pulse_step)
+	
+    df = filter(row -> row."TC_Counter1" == ((100 - soc[1]) / soc_increment) || row."TC_Counter1" == ((100 - soc[2]) / soc_increment), data)
+	# df = filter(row -> row."Step_Index" == dis_pulse_step || row."Step_Index" == char_pulse_step || row."Step_Index" == (char_pulse_step-1)|| row."Step_Index" == (char_pulse_step+1) || row."Step_Index" == (dis_pulse_step-1), df)
+	
+	d = filter(row -> row."Step_Index" == dis_pulse_step || row."Step_Index" == char_pulse_step || row."Step_Index" == (char_pulse_step-1)|| row."Step_Index" == (char_pulse_step+1) || row."Step_Index" == (dis_pulse_step-1) || row."Step_Index" == (char_pulse_step+2) || row."Step_Index" == (char_pulse_step+3), df)
+	return d[5:end,:]
+end
+
 function HPPC(data, soc_increment, cycle, dis_pulse_step, char_pulse_step, dis_step, initial_cap_step, DCIR_step)
 
     γ = Dict()
@@ -135,6 +157,62 @@ function HPPC(data, soc_increment, cycle, dis_pulse_step, char_pulse_step, dis_s
 	return γ
 end
 
+function HPPC(data, soc_increment, cycle, dis_pulse_step, char_pulse_step, dis_step, initial_cap_step, DCIR_step, new)
+
+    γ = Dict()
+
+	initial_capacity = filter(row -> row."Step Index" == initial_cap_step, data)[end,"Discharge Capacity (Ah)"]
+
+	DCIR = unique(select(filter(row -> row."Step Index" == DCIR_step, data), "Internal Resistance (Ohm)"))
+
+	soc_steps = 100 ÷ soc_increment #length(collect(0:soc_increment:100))-1
+	SOC = Array{Float64}(undef, soc_steps, 1)
+	∇_discharge = DataFrame([[], [], [], [], [], [], [], [], []], ["SOC","Start Voltage(V)","End Voltage(V)", "Resistance", "Average Power (W)", "Max Power (W)", "Min Power (W)", "Max Current(A)", "Min Current(A)"])	
+	∇_charge = DataFrame([[], [], [], [], [], [], [], [], []], ["SOC","Start Voltage(V)","End Voltage(V)", "Resistance", "Average Power (W)", "Max Power (W)", "Min Power (W)", "Max Current(A)", "Min Current(A)"])
+
+	dpulse_v = filter(row -> row."Step Index" == (dis_pulse_step-1) && row."Cycle Index" == cycle, data)
+	cpulse_v = filter(row -> row."Step Index" == (char_pulse_step-1) && row."Cycle Index" == cycle, data)
+	df_dpulse = filter(row -> row."Step Index" == dis_pulse_step && row."Cycle Index" == cycle, data) 
+	df_cpulse = filter(row -> row."Step Index" == char_pulse_step && row."Cycle Index" == cycle, data)
+	df_discharge = filter(row -> row."Step Index" == dis_step && row."Cycle Index" == cycle, data)
+
+	# Calculate State of Charge based on capacities - Discharge to next step + discharge pulse - charge pulse
+	# for g in 0:(soc_steps-1) 0:findmax(df_discharge[:,"TC_Counter1"])
+
+
+	for g in 1:(soc_steps-1)
+		o = filter(row -> row."TC_Counter1" == g, df_discharge)
+		dis_step_cap = o[end, "Discharge Capacity (Ah)"] - o[1, "Discharge Capacity (Ah)"]
+		k = filter(row -> row."TC_Counter1" == g, df_dpulse)
+		pulse_cap_d = k[end, "Discharge Capacity (Ah)"] - k[1, "Discharge Capacity (Ah)"]
+		p = filter(row -> row."TC_Counter1" == g, df_cpulse)
+		pulse_cap_c = p[end, "Charge Capacity (Ah)"] - p[1, "Charge Capacity (Ah)"]
+
+		SOC[g+1] = dis_step_cap + pulse_cap_d - pulse_cap_c
+	end
+
+	# print(SOC)
+	SOC = cumsum(SOC[:,1])
+	SOC = 100 .- SOC ./ initial_capacity .* 100
+
+	# Calculate relevant data for each SOC point
+	for j in 1:(soc_steps)
+		dpulse_vi = filter(row -> row."TC_Counter1" == j-1, dpulse_v)[end,"Voltage (V)"]
+		discharge = hppc_calc_n(df_dpulse, j, dpulse_vi)
+		push!(∇_discharge, [SOC[j], dpulse_vi, filter(row -> row."TC_Counter1" == j-1, df_dpulse)[end,"Voltage (V)"],  discharge[1], discharge[2], discharge[3], discharge[4], discharge[5], discharge[6]])
+	end
+
+	for q in 1:(soc_steps)
+		cpulse_vi = filter(row -> row."TC_Counter1" == q-1, cpulse_v)[end,"Voltage (V)"]
+		charge = hppc_calc_n(df_cpulse, q, cpulse_vi)
+		push!(∇_charge, [SOC[q], cpulse_vi, filter(row -> row."TC_Counter1" == q-1, df_cpulse)[end,"Voltage (V)"], charge[1], charge[2], charge[3], charge[4], charge[5], charge[6]])
+	end
+
+	γ = Dict("Charge" => ∇_charge, "Discharge" => ∇_discharge)
+
+	return γ
+end
+
 function hppc_calc(dataframe, i, init_V)
 	df = filter(row -> row."TC_Counter1" == (i-1), dataframe)
 
@@ -149,6 +227,26 @@ function hppc_calc(dataframe, i, init_V)
 	t = [P_max P_min I_max I_min]
 
 	if df[1, "Current(A)"] < 0
+		t .= -t
+	end
+
+	return [r, P_avg, t[1], t[2], t[3], t[4]]
+end
+
+function hppc_calc_n(dataframe, i, init_V)
+	df = filter(row -> row."TC_Counter1" == (i-1), dataframe)
+
+	r = abs((init_V - df[end,"Voltage (V)"]) / abs(mean(df[:,"Current (A)"])))
+	P = df[:,"Voltage (V)"] .* df[:,"Current (A)"]
+	P_min = findmin(abs.(P))[1]
+	P_max = findmax(abs.(P))[1]
+	P_avg = mean(P)
+	I_min = findmin(abs.(df[:,"Current (A)"]))[1]
+	I_max = findmax(abs.(df[:,"Current (A)"]))[1]
+
+	t = [P_max P_min I_max I_min]
+
+	if df[1, "Current (A)"] < 0
 		t .= -t
 	end
 
