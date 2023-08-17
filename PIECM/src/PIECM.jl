@@ -4,7 +4,7 @@ using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, XLSX, Statistic
 using StatsBase: L2dist
  
 export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv, sqrzeros, HPPC, hppc_fun
-export ecm_discrete, costfunction, HPPC_n
+export ecm_discrete, costfunction, HPPC_n, data_imp, pres_avg
 
 # --------------- Fitting data import and filtering -----------------------------
 
@@ -13,6 +13,8 @@ function data_import_csv(file_name, format)
 	df = CSV.read(file_name, DataFrame)
 	if format == "new"
 		rename!(df,"Step Index" => "Step_Index")
+		rename!(df,"Test Time (s)" => "Test_Time(s)")
+		rename!(df,"Date Time" => "Date_Time")
 		rename!(df,"Cycle Index" => "Cycle_Index")
 		rename!(df,"Voltage (V)" => "Voltage(V)")
 		rename!(df,"Current (A)" => "Current(A)")
@@ -41,8 +43,25 @@ function pressurematch(cell_data, pressure_data, A_cell)
 	return leftjoin(cell_data, pressure_data, on = :Date_Time)
 end
 
+function data_imp(hppc_file, pres_file, Acell)
+    
+    cd = data_import_csv(hppc_file, "new")
+    A_cell = Acell[1] * Acell[2]
+    pd = pressure_dateformat_fix(pres_file)
+    data = pressurematch(cd, pd, A_cell)
+    
+    return sort!(data,["Date_Time"])
+
+end
+
+function pres_avg(pres_file, data, Area, digits)
+    p = pressure_dateformat_fix(pres_file)
+    return round(mean(filter(!ismissing, pressurematch(data, p, Area[1] * Area[2])[:,"Pressure"]))/1000, digits=digits)
+end
+
+
 function pocv(file_name, POCV_discharge_step, POCV_charge_step, OCV_steps)
-	df = data_import_csv(file_name)
+	df = data_import_csv(file_name, "old")
 
 	POCVc = Array{Float64}(undef,(OCV_steps+1),2)
 	POCVd = Array{Float64}(undef,(OCV_steps+1),3)

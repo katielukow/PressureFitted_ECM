@@ -6,7 +6,7 @@ plotly()
 # --------------- Data Import ------------------------------
 function data_imp(hppc_file, pres_file, Acell)
     
-    cd = data_import_csv(hppc_file)
+    cd = data_import_csv(hppc_file, "old")
     A_cell = Acell[1] * Acell[2]
     pd = pressure_dateformat_fix(pres_file)
     data = pressurematch(cd, pd, A_cell)
@@ -54,7 +54,7 @@ dcir_100kpa_61 = HPPC(mbpf_100kpa, 5, 61, 54, 56, 59, 50, 13)
 
 # ------------------- HPPC Pulse Functions ---------------------------------
 # Filters HPPC data based on a specific SOC point, currently must be a multiple of the SOC soc_increment
-soc = .1
+soc = 1
 celldim = [0.128, 0.036]
 
 mbpf25kpa_1 = hppc_fun(mbpf25kpa, soc*100, 10, 1, 17, 19, 1)
@@ -74,6 +74,15 @@ P_130kpa = pres_avg("data/PressureData/230321_PressureTest_11_0044.csv",mbpf130k
 P25kpa = data_imp("data/HPPC/230320_MBPF_Investigation_25kpa_11_0043_Channel_6_Wb_1.csv","data/PressureData/230320_MBPF_Investigation_11_0043_25kpa.csv", celldim)
 P40kpa = data_imp("data/HPPC/230320_MBPF_Investigation_40kpa_11_0048_Channel_6_Wb_1.csv", "data/PressureData/230321_PressureTest_11_0048.csv", celldim)
 P130kpa = data_imp("data/HPPC/230320_MBPF_Investigation_130kpa_11_0044_Channel_5_Wb_1.csv","data/PressureData/230321_PressureTest_11_0044.csv",celldim)
+
+p_plot = Array{Float64}(undef, 10)
+k = 1
+for i in 10:10:100
+    println(i)
+    p = hppc_fun(P130kpa, i, 10, 1, 17, 19, 1)
+    p_plot[k] = mean(skipmissing(p[:,"Pressure"]))
+    k += 1
+end
 
 # P25kpa = pressure_dateformat_fix("data/PressureData/230320_MBPF_Investigation_11_0043_25kpa.csv")
 # P40kpa = pressure_dateformat_fix("data/PressureData/230321_PressureTest_11_0048.csv")
@@ -95,26 +104,26 @@ P40kpa_norm2 = P40kpa_charge[:,"Pressure"] .- P40kpa_charge[3,"Pressure"]
 P130kpa_norm2 = P130kpa_charge[:,"Pressure"] .- P130kpa_charge[1,"Pressure"]
 
 dcir_step = 32
-R_0kpa = filter(row -> row."Step Index" == dcir_step, mbpf_0kpa)
-R_50kpa = filter(row -> row."Step Index" == dcir_step, mbpf_50kpa)
-R_100kpa = filter(row -> row."Step Index" == dcir_step, mbpf_100kpa)
+R_0kpa = filter(row -> row."Step_Index" == dcir_step, mbpf_0kpa)
+R_50kpa = filter(row -> row."Step_Index" == dcir_step, mbpf_50kpa)
+R_100kpa = filter(row -> row."Step_Index" == dcir_step, mbpf_100kpa)
 
 
-scatter(R_0kpa[:,"Cycle Index"], R_0kpa[:,"Internal Resistance (Ohm)"])
-scatter!(R_50kpa[:,"Cycle Index"], R_50kpa[:,"Internal Resistance (Ohm)"])
-scatter!(R_100kpa[:,"Cycle Index"], R_100kpa[:,"Internal Resistance (Ohm)"])
+scatter(R_0kpa[:,"Cycle_Index"], R_0kpa[:,"Internal_Resistance(Ohm)"])
+scatter!(R_50kpa[:,"Cycle_Index"], R_50kpa[:,"Internal_Resistance(Ohm)"])
+scatter!(R_100kpa[:,"Cycle_Index"], R_100kpa[:,"Internal_Resistance(Ohm)"])
 
 
 scatter(dcir_0kpa_1["Discharge"][:,"SOC"], dcir_0kpa_1["Discharge"][:,"Resistance"].*1000, label="0kpa Cycle 1", legend=false)
 scatter!(dcir_50kpa_1["Discharge"][:,"SOC"], dcir_50kpa_1["Discharge"][:,"Resistance"].*1000, label="50kpa Cycle 1")
-scatter!(dcir_100kpa_1["Discharge"][:,"SOC"], dcir_100kpa_1["Discharge"][:,"Resistance"].*1000, label="100kpa Cycle 1")
+scatter(dcir_100kpa_1["Discharge"][:,"SOC"], dcir_100kpa_1["Discharge"][:,"Resistance"].*1000, label="100kpa Cycle 1")
 
 scatter!(dcir_0kpa_21["Discharge"][:,"SOC"], dcir_0kpa_21["Discharge"][:,"Resistance"].*1000, label="0kpa Cycle 21")
 scatter!(dcir_50kpa_21["Discharge"][:,"SOC"], dcir_50kpa_21["Discharge"][:,"Resistance"].*1000, label="50kpa Cycle 21")
 scatter!(dcir_100kpa_21["Discharge"][:,"SOC"], dcir_100kpa_21["Discharge"][:,"Resistance"].*1000, label="100kpa Cycle 21")
 
 scatter!(dcir_0kpa_41["Discharge"][:,"SOC"], dcir_0kpa_41["Discharge"][:,"Resistance"].*1000, label="0kpa Cycle 41")
-scatter!(dcir_50kpa_41["Discharge"][:,"SOC"], dcir_50kpa_41["Discharge"][:,"Resistance"].*1000, label="50kpa Cycle 41")
+scatter(dcir_50kpa_41["Discharge"][:,"SOC"], dcir_50kpa_41["Discharge"][:,"Resistance"].*1000, label="50kpa Cycle 41")
 scatter!(dcir_100kpa_41["Discharge"][:,"SOC"], dcir_100kpa_41["Discharge"][:,"Resistance"].*1000, label="100kpa Cycle 41")
 
 scatter!(dcir_0kpa_61["Discharge"][:,"SOC"], dcir_0kpa_61["Discharge"][:,"Resistance"].*1000, label="0kpa Cycle 61")
@@ -129,6 +138,7 @@ scatter!(P25kpa_charge[:,:Pressure], label = string(P_40kpa))
 scatter!(P130kpa_charge[:,:Pressure], label = string(P_130kpa))
 
 scatter!(twinx(), P130kpa_charge[:,"Voltage(V)"])
+
 
 Ω_plot = @pgf Axis(
 
@@ -222,7 +232,7 @@ P_plot = @pgf GroupPlot(
         #     anchor = "east",
         #     legend_columns = 1
         # },
-        legend_pos= "north east"
+        # legend_pos= "north east"
 
     },
 
@@ -238,7 +248,7 @@ P_plot = @pgf GroupPlot(
     #     yticklabel_style={
     #         precision=5
     # },
-        legend_pos= "east"
+        # legend_pos= "east"
     },
 
     Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = P40kpa_charge[:,"Step_Time(s)"], y = P40kpa_charge[:,:Pressure]/1000)),
