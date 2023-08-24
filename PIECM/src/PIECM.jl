@@ -9,11 +9,13 @@ export ecm_discrete, costfunction, HPPC_n, data_imp, pres_avg, Capacity_Fade
 # --------------- Fitting data import and filtering -----------------------------
 
 sqrzeros(A) = zeros(A,A)
+
 function data_import_csv(file_name, format) 
 	df = CSV.read(file_name, DataFrame)
 	if format == "new"
 		rename!(df,"Step Index" => "Step_Index")
 		rename!(df,"Test Time (s)" => "Test_Time(s)")
+		rename!(df,"Step Time (s)" => "Step_Time(s)")
 		rename!(df,"Date Time" => "Date_Time")
 		rename!(df,"Cycle Index" => "Cycle_Index")
 		rename!(df,"Voltage (V)" => "Voltage(V)")
@@ -99,6 +101,8 @@ function pocv(file_name, POCV_discharge_step, POCV_charge_step, OCV_steps)
 	POCV_SOC = ((POCVd[:,1] .+ POCVc[:,1]) ./ 2) ./ 100
 	POCV_V = (POCVd[:,2] .+ POCVc[:,2]) ./ 2
 
+	@infiltrate cond=true
+
 
 	return DataFrame(State_of_Charge=POCV_SOC, Voltage=POCV_V,DischargeVoltage=POCVd[:,2],ChargeVoltage=POCVc[:,2],DischargeEnergy=POCVd[:,3])
 end
@@ -130,7 +134,8 @@ function HPPC(data, soc_increment, cycle, dis_pulse_step, char_pulse_step, dis_s
 	DCIR = unique(select(filter(row -> row."Step_Index" == DCIR_step, data), "Internal_Resistance(Ohm)"))
 
 	soc_steps = 100 ÷ soc_increment #length(collect(0:soc_increment:100))-1
-	SOC = Array{Float64}(undef, soc_steps, 1)
+	# SOC = Array{Float64}(undef, soc_steps, 1)
+	SOC = zeros(soc_steps,1)
 	∇_discharge = DataFrame([[], [], [], [], [], [], [], [], []], ["SOC","Start Voltage(V)","End Voltage(V)", "Resistance", "Average Power (W)", "Max Power (W)", "Min Power (W)", "Max Current(A)", "Min Current(A)"])	
 	∇_charge = DataFrame([[], [], [], [], [], [], [], [], []], ["SOC","Start Voltage(V)","End Voltage(V)", "Resistance", "Average Power (W)", "Max Power (W)", "Min Power (W)", "Max Current(A)", "Min Current(A)"])
 
@@ -235,7 +240,7 @@ end
 # Q = capacity [Ah]
 
 # Static time step forward model
-function ecm_discrete(x, n_RC, uᵢ, Δ :: Float64, η, Q, OCV, Init_SOC)
+function ecm_discrete(x, n_RC, uᵢ, Δ :: Float64, eta, Q, OCV, Init_SOC)
     
 	interp_linear = linear_interpolation(OCV."State_of_Charge", OCV."Voltage") # Interpolation function for OCV based on capacity change
 	
@@ -251,7 +256,12 @@ function ecm_discrete(x, n_RC, uᵢ, Δ :: Float64, η, Q, OCV, Init_SOC)
 
 	# Initial Values
     z[1] = Init_SOC
-	z[2] = z[1] - (η*((Δ)/3600) / Q) * uᵢ[1]
+	if iᵣ[1] < 0
+		η = 1
+		z[2] = z[1] - (η*((Δ)/3600) / Q) * uᵢ[1]
+	else
+	end
+	v[1] = interp_linear(Init_SOC)
     v[1] = interp_linear(Init_SOC)
     iᵣ[1]=0 # can this be a proper term?
 
@@ -265,7 +275,7 @@ function ecm_discrete(x, n_RC, uᵢ, Δ :: Float64, η, Q, OCV, Init_SOC)
 		A_RC = exp(-(Δ)/(x[1]*x[2]))
         B_RC = 1 - exp(-(Δ)/(x[1]*x[2]))
         z[k+1] = z[k] - (η*((Δ)/3600) / Q) * uᵢ[k]
-		iᵣ[k+1] = A_RC * iᵣ[k] + B_RC * uᵢ[k] # solve matrix dimensionality issues for multiple RC pairs
+		iᵣ[k+1] = - A_RC * iᵣ[k] - B_RC * uᵢ[k] # solve matrix dimensionality issues for multiple RC pairs
 		v[k] = interp_linear(z[k]) - (x[1] * iᵣ[k]) - (x[3] * uᵢ[k])
     end
 
@@ -284,6 +294,9 @@ function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, Init_SOC)
     B_RC = zeros(n_RC)
 
     z = Array{Float64}(undef, length(uᵢ))
+	Ah = Array{Float64}(undef, length(uᵢ))
+	h = Array{Float64}(undef, length(uᵢ))
+	s = Array{Float64}(undef, length(uᵢ))
     v = Array{Float64}(undef, length(uᵢ))
     τ = Array{Float64}(undef, length(Δ))
 
@@ -297,6 +310,7 @@ function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, Init_SOC)
     z[1] = Init_SOC
     v[1] = interp_linear(Init_SOC)
     iᵣ = zeros(length(uᵢ),n_RC)
+	γ = 1
 
     for k in 1:length(uᵢ)-1
 		for α in 1:n_RC
@@ -305,11 +319,21 @@ function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, Init_SOC)
 			B_RC[α] = (1-F)
 		end
 
+		if (uᵢ[k+1] != 0)
+			s[k+1] = sign(uᵢ[k+1])
+		else
+			s[k] = s[k]
+		end
+
+		Ah[k] = exp(-abs(η * uᵢ[k] * γ * τ[k]) / Q)
+
         z[k+1] = z[k] - (η*((τ[k+1])/3600) / Q) * -uᵢ[k]
 
 		iᵣ[k+1,:] = (A_RC * iᵣ[k,:] + B_RC * -uᵢ[k])'
 
-		v[k] = interp_linear(z[k]) - sum(x[1:n_RC] .* iᵣ[k,:]') - (x[end] * -uᵢ[k])
+		h[k+1] = Ah[k] * h[k] + (Ah[k] -1) * sign(uᵢ[k])
+
+		v[k] = interp_linear(z[k]) - sum(x[1:n_RC] .* iᵣ[k,:]') - (x[end] * -uᵢ[k]) + x[n_RC*2 + 1 + 1] * s[k] + x[n_RC*2 + 1 + 2] * h[k]
     end
 
     return v[1:end-1]
