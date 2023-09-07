@@ -1,4 +1,4 @@
-using PIECM, Plots, Optim, Statistics, PGFPlotsX, LaTeXStrings
+using PIECM, Plots, Optim, Statistics, PGFPlotsX, LaTeXStrings, StatsBase
 
 plotly()
 Ϟ = distinguishable_colors(10)
@@ -17,31 +17,72 @@ mbpf130kpa_1 = hppc_fun(mbpf130kpa, soc*100, 10, 1, 20, 22, 1)
 
 mbpf40kpa_d = hppc_fun(mbpf40kpa, soc*100, 10, 1, 20, 20, 1)
 
+# Model 2
+cell_dim2 = [0.0418, .1255]
+
+P0kpa = data_import_csv("data/HPPC/230606_MBPF_PCharact_Mel_SLPBA442124_0kpa_25C_Channel_3_Wb_1.csv", "new")
+mbpf_50kpa = data_import_csv("data/HPPC/230606_MBPF_PCharact_Mel_SLPBA442124_50kpa_25C_Channel_4_Wb_1.csv", "new")
+mbpf_100kpa = data_import_csv("data/HPPC/230606_MBPF_PCharact_Mel_SLPBA442124_100kpa_25C_Channel_7_Wb_1.csv", "new")
+
+mbpf0kpa_1 = hppc_fun(P0kpa, soc*100, 20, 1, 20, 22, 1)
+mbpf0kpa_101 = hppc_fun(P0kpa, soc*100, 20, 1, 54, 56, 101)
+
+
+P0kpa.Date_Time .= replace.(P0kpa.Date_Time, "\t" => "")
+mbpf_50kpa.Date_Time .= replace.(mbpf_50kpa.Date_Time, "\t" => "")
+mbpf_100kpa.Date_Time .= replace.(mbpf_100kpa.Date_Time, "\t" => "")
+
+
 # Optimisation Parameters
-data = mbpf130kpa_1
-uᵢ = data."Current(A)"
-Δ = data."Test_Time(s)"
+# data = mbpf40kpa_1
+# dc_data = filter(row -> row."Step_Index" == 12, mbpf_50kpa)
+# uᵢ = data."Current(A)"
+# Δ = data."Test_Time(s)"
 η = 0.999
 Q = 3.7
 
-costfunction_closed1 = κ->costfunction(κ, 1, uᵢ, Δ, η, Q, ocv, soc, data) 
-costfunction_closed2 = κ->costfunction(κ, 2, uᵢ, Δ, η, Q, ocv, soc, data) 
-costfunction_closed3 = κ->costfunction(κ, 3, uᵢ, Δ, η, Q, ocv, soc, data) 
+# costfunction_closed1 = κ->costfunction(κ, 1, uᵢ, Δ, η, Q, ocv, soc, data) 
+# costfunction_closed3 = κ->costfunction(κ, 3, uᵢ, Δ, η, Q, ocv, soc, data) 
 
 #-----------------------Initial Conditions--------------------------
-x1 = [0.010, 3000, 0.010, 0]
-x2 = [0.010, 0.010, 3000, 3000, 0.010, 0, 0]
-x3 = [0.010, 0.010, 0.010, 3000, 3000, 3000, 0.010, 0]
+x2 = [0.01, 0.01, 2000, 2000, 0.008]
 
 # ---------------------------Optimisation-----------------------------
 
-# res1 = optimize(costfunction_closed1, x1, iterations=10000)
+# res1 = optimize(costfunction_closed1, x1, LBFGS())
 # x1 = Optim.minimizer(res1)
 # v1 = ecm_discrete(x1, 1, data."Current(A)", data."Test_Time(s)", 0.9997, 3.7, ocv, soc);
 
-# res2 = optimize(costfunction_closed2, x2, iterations = 10000)
-# x2 = Optim.minimizer(res2)
-# v2 = ecm_discrete(x2, 2, data."Current(A)", data."Test_Time(s)", 0.9997, 3.7, ocv, soc);
+
+
+
+function ecmrmse(data_in, soc, xi, ocv)
+    data = hppc_fun(data_in, soc*100, 10, 1, 20, 22, 1)
+    uᵢ = data."Current(A)"
+    Δ = data."Test_Time(s)"
+
+    costfunction_closed2 = κ->costfunction(κ, 2, uᵢ, Δ, η, Q, ocv, soc, data) 
+
+
+    res = optimize(costfunction_closed2, xi, iterations = 10000)
+    x = Optim.minimizer(res)
+    v2 = ecm_discrete(x, 2, data."Current(A)", data."Test_Time(s)", 0.9997, 3.7, ocv, soc)
+
+    return rmsd(v2, data."Voltage(V)"[1:end-1])
+
+end
+
+rmses = Array{Float64}(undef, 10)
+for i in .1:0.1:1
+    ξ = ecmrmse(mbpf130kpa, i, x2, ocv)
+    println(ξ)
+    rmses[Int(i*10)] = ξ
+end
+
+# println(rmses)
+println(mean(rmses, weights(ones(10))))
+
+# println(rmsd(v2, data."Voltage(V)"[1:end-1]))
 
 # res3 = optimize(costfunction_closed3, x3, iterations = 10000)
 # x3 = Optim.minimizer(res3)
@@ -73,12 +114,11 @@ x3 = [0.010, 0.010, 0.010, 3000, 3000, 3000, 0.010, 0]
 #         # xtick = 0:10:100,
 #     },
 
-#     Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = mbpf130kpa_1[:,"Test_Time(s)"], y = mbpf130kpa_1[:,"Voltage(V)"])),
-#     LegendEntry("47 kPa Experimental"),
-#     Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = mbpf130kpa_1[1:end-1,"Test_Time(s)"], y = v2)),
+#     Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = data[:,"Test_Time(s)"], y = data[:,"Voltage(V)"])),
+#     LegendEntry("0 kPa Experimental"),
+#     # Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = mbpf0kpa_101[5:end,"Test_Time(s)"].-mbpf0kpa_101[5,"Test_Time(s)"], y = mbpf0kpa_101[5:end,"Voltage(V)"])),
+#     LegendEntry("0 kPa cycle 101 Experimental"),
+#     Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = data[1:end-1,"Test_Time(s)"], y = v2)),
 #     LegendEntry("ECM"),
-#     # Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = mbpf130kpa_1[1:end-1,"Test_Time(s)"], y = v3)),
-#     # LegendEntry("ESC"),
-
 
 # )

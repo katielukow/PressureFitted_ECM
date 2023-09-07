@@ -57,7 +57,7 @@ p_temp = filter(row -> row.Cycle_Index == 1, P200kpa)
 for i in 0:9
     p = filter(row -> row.Step_Index == 25 && row.TC_Counter1 == i, p_temp)
     p200_plot[k,1] = mean(skipmissing(p[:,"Pressure"]))/1000
-    p200_plot[k,2] = 100 - (i+1) * 5
+    p200_plot[k,2] = 100 - (i+1) * 10
     k += 1
 end
 

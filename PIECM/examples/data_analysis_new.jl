@@ -28,6 +28,9 @@ P50kpa = pressurematch(mbpf_50kpa, Pres50, A_cell)
 Pres100 = pressure_dateformat_fix("data/PressureData/230606_MBPF_KL_100kpa.csv")
 P100kpa = pressurematch(mbpf_100kpa, Pres100, A_cell)
 
+Pres40 = pressure_dateformat_fix("data/PressureData/230606_MBPF_KL_100kpa.csv")
+P100kpa = pressurematch(mbpf_100kpa, Pres100, A_cell)
+
 p50_all = OrderedDict()
 for j in 1:20:101
     k = 1
@@ -227,9 +230,11 @@ Pcomp_plot = @pgf Axis(
         legend_pos= "south east"
     },
 
-    Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = p50_all["21"][:,2], y = p50_all["21"][:,1])),
+    Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = p50_all["1"][:,2], y = p50_all["1"][:,1])),
     LegendEntry("50 kPa"),
-    Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = p100_all["21"][:,2], y = p100_all["21"][:,1])),
+    Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = p100_all["1"][:,2], y = p100_all["1"][:,1])),
+    LegendEntry("100 kPa"),
+    Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = p100_all["1"][:,2], y = p100_all["1"][:,1])),
     LegendEntry("100 kPa"),
 
 )
@@ -403,7 +408,7 @@ PresDis2_plot = @pgf GroupPlot(
     {
         group_style =
         {
-            group_size="2 by 1",
+            group_size="3 by 1",
             xticklabels_at="edge bottom",
             # yticklabels_at="edge left",
             # legend_pos= "north west"
@@ -423,11 +428,11 @@ PresDis2_plot = @pgf GroupPlot(
         # legend_pos= "south east"
     },
 
-    Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"], y = p50csv[:,"Pressure"])),
+    # Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"], y = p50csv[:,"Pressure"])),
     # LegendEntry("0 kPa"),
     Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p100csv[:,"Step_Time(s)"], y = p100csv[:,"Pressure"])),
     # LegendEntry("50 kPa"),
-    Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"], y = p40_discharge[:,"Pressure"]./1000)),
+    # Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"], y = p40_discharge[:,"Pressure"]./1000)),
     Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = p200_discharge[:,"Step_Time(s)"], y = p200_discharge[:,"Pressure"]./1000)),
     # LegendEntry("50 kPa"),
 
@@ -441,14 +446,32 @@ PresDis2_plot = @pgf GroupPlot(
         # xtick = 0:20:100,
         legend_pos= "south west"
     },
-    Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"], y = p40_discharge[:,"Voltage(V)"])),
-    LegendEntry("Model 1 - 140 kPa"),
+    # Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"], y = p40_discharge[:,"Voltage(V)"])),
+    # LegendEntry("Model 1 - 40 kPa"),
     Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = p200_discharge[:,"Step_Time(s)"], y = p200_discharge[:,"Voltage(V)"])),
     LegendEntry("Model 1 - 210 kPa"),
-    Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"], y = p50csv[:,"Voltage(V)"])),
-    LegendEntry("Model 2 - 50 kPa"),
+    # Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"], y = p50csv[:,"Voltage(V)"])),
+    # LegendEntry("Model 2 - 50 kPa"),
     Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p100csv[:,"Step_Time(s)"], y = p100csv[:,"Voltage(V)"])),
     LegendEntry("Model 2 - 100 kPa"),
+    {
+        xlabel="Time [s]",
+        ylabel="Temperature [C]",
+        # xmin = -0.1, 
+        # xmax = 101,
+        # ymin = 3.75,
+        # ymax = 4.2,
+        # xtick = 0:20:100,
+        legend_pos= "south west"
+    },
+    # Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"], y = p40_discharge[:,"Aux_Temperature_1(C)"])),
+    # LegendEntry("Model 1 - 140 kPa"),
+    Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = p200_discharge[:,"Step_Time(s)"], y = p200_discharge[:,"Aux_Temperature_1(C)"])),
+    # LegendEntry("Model 1 - 210 kPa"),
+    # Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"], y = p50csv[:,"Aux_Temperature_1(C)"])),
+    # LegendEntry("Model 2 - 50 kPa"),
+    Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p100csv[:,"Step_Time(s)"], y = p100csv[:,"Aux_Temperature_1(C)"])),
+    # LegendEntry("Model 2 - 100 kPa"),
 
 
 

@@ -24,6 +24,7 @@ function data_import_csv(file_name, format)
 		rename!(df,"Discharge Capacity (Ah)" => "Discharge_Capacity(Ah)")
 		rename!(df,"Discharge Energy (Wh)" => "Discharge_Energy(Wh)")
 		rename!(df,"Charge Capacity (Ah)" => "Charge_Capacity(Ah)")
+		rename!(df,"Aux_Temperature_1 (C)" => "Aux_Temperature_1(C)")
 	end
 
 	return df
@@ -101,7 +102,7 @@ function pocv(file_name, POCV_discharge_step, POCV_charge_step, OCV_steps)
 	POCV_SOC = ((POCVd[:,1] .+ POCVc[:,1]) ./ 2) ./ 100
 	POCV_V = (POCVd[:,2] .+ POCVc[:,2]) ./ 2
 
-	@infiltrate cond=true
+	# @infiltrate cond=true
 
 
 	return DataFrame(State_of_Charge=POCV_SOC, Voltage=POCV_V,DischargeVoltage=POCVd[:,2],ChargeVoltage=POCVc[:,2],DischargeEnergy=POCVd[:,3])
@@ -333,7 +334,8 @@ function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, Init_SOC)
 
 		h[k+1] = Ah[k] * h[k] + (Ah[k] -1) * sign(uᵢ[k])
 
-		v[k] = interp_linear(z[k]) - sum(x[1:n_RC] .* iᵣ[k,:]') - (x[end] * -uᵢ[k]) + x[n_RC*2 + 1 + 1] * s[k] + x[n_RC*2 + 1 + 2] * h[k]
+		v[k] = interp_linear(z[k]) - sum(x[1:n_RC] .* iᵣ[k,:]') - (x[end] * -uᵢ[k]) 
+		# + x[n_RC*2 + 1 + 1] * s[k] + x[n_RC*2 + 1 + 2] * h[k]
     end
 
     return v[1:end-1]
