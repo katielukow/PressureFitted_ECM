@@ -408,7 +408,7 @@ PresDis2_plot = @pgf GroupPlot(
     {
         group_style =
         {
-            group_size="3 by 1",
+            group_size="2 by 2",
             xticklabels_at="edge bottom",
             # yticklabels_at="edge left",
             # legend_pos= "north west"
@@ -418,7 +418,61 @@ PresDis2_plot = @pgf GroupPlot(
 
     },
     {
-        xlabel="Time [s]",
+        # xlabel="Time [s]",
+        ylabel="Voltage [V]",
+        # xmin = -0.1, 
+        # xmax = 101,
+        # ymin = 3.75,
+        # ymax = 4.2,
+        # xtick = 0:20:100,
+        legend_pos= "south west"
+    },
+    Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"]./3600, y = p40_discharge[:,"Voltage(V)"])),
+    LegendEntry("Cell 1 - 40 kPa"),
+    # Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = p200_discharge[:,"Step_Time(s)"], y = p200_discharge[:,"Voltage(V)"])),
+    # LegendEntry("Cell 1 - 210 kPa"),
+    Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"]./3600, y = p50csv[:,"Voltage(V)"])),
+    LegendEntry("Cell 2 - 50 kPa"),
+    # Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p100csv[:,"Step_Time(s)"], y = p100csv[:,"Voltage(V)"])),
+    # LegendEntry("Cell 2 - 100 kPa"),
+
+    {
+        # xlabel="Time [s]",
+        ylabel="Pressure [kPa]",
+        # xmin = -0.1, 
+        # xmax = 101,
+        # ymin = 3.35,
+        # ymax = 3.8,
+        # xtick = 0:20:100,
+        # legend_pos= "south east"
+    },
+
+    Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"]./3600, y = p50csv[:,"Pressure"])),
+    # LegendEntry("0 kPa"),
+    Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"]./3600, y = p40_discharge[:,"Pressure"]./1000)),
+
+
+    {
+        xlabel="Time [hours]",
+        ylabel="Voltage [V]",
+        # xmin = -0.1, 
+        # xmax = 101,
+        # ymin = 3.75,
+        # ymax = 4.2,
+        # xtick = 0:20:100,
+        legend_pos= "south west"
+    },
+    # Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"], y = p40_discharge[:,"Voltage(V)"])),
+    # LegendEntry("Model 1 - 40 kPa"),
+    Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = p200_discharge[:,"Step_Time(s)"]./3600, y = p200_discharge[:,"Voltage(V)"])),
+    LegendEntry("Cell 1 - 210 kPa"),
+    # Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"], y = p50csv[:,"Voltage(V)"])),
+    # LegendEntry("Model 2 - 50 kPa"),
+    Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p100csv[:,"Step_Time(s)"]./3600, y = p100csv[:,"Voltage(V)"])),
+    LegendEntry("Cell 2 - 100 kPa"),
+
+    {
+        xlabel="Time [hours]",
         ylabel="Pressure [kPa]",
         # xmin = -0.1, 
         # xmax = 101,
@@ -430,52 +484,106 @@ PresDis2_plot = @pgf GroupPlot(
 
     # Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"], y = p50csv[:,"Pressure"])),
     # LegendEntry("0 kPa"),
-    Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p100csv[:,"Step_Time(s)"], y = p100csv[:,"Pressure"])),
+    Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p100csv[:,"Step_Time(s)"]./3600, y = p100csv[:,"Pressure"])),
     # LegendEntry("50 kPa"),
     # Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"], y = p40_discharge[:,"Pressure"]./1000)),
-    Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = p200_discharge[:,"Step_Time(s)"], y = p200_discharge[:,"Pressure"]./1000)),
+    Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = p200_discharge[:,"Step_Time(s)"]./3600, y = p200_discharge[:,"Pressure"]./1000)),
     # LegendEntry("50 kPa"),
 
+
+)
+
+PresTemp_plot = @pgf GroupPlot(
+
     {
-        xlabel="Time [s]",
-        ylabel="Voltage [V]",
-        # xmin = -0.1, 
-        # xmax = 101,
-        # ymin = 3.75,
-        # ymax = 4.2,
-        # xtick = 0:20:100,
-        legend_pos= "south west"
+        group_style =
+        {
+            group_size="2 by 2",
+            xticklabels_at="edge bottom",
+            # yticklabels_at="edge left",
+            # legend_pos= "north west"
+            horizontal_sep = "2cm"
+        },
+        height = "8cm", width = "10cm",    
+
     },
-    # Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"], y = p40_discharge[:,"Voltage(V)"])),
-    # LegendEntry("Model 1 - 40 kPa"),
-    Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = p200_discharge[:,"Step_Time(s)"], y = p200_discharge[:,"Voltage(V)"])),
-    LegendEntry("Model 1 - 210 kPa"),
-    # Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"], y = p50csv[:,"Voltage(V)"])),
-    # LegendEntry("Model 2 - 50 kPa"),
-    Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p100csv[:,"Step_Time(s)"], y = p100csv[:,"Voltage(V)"])),
-    LegendEntry("Model 2 - 100 kPa"),
     {
-        xlabel="Time [s]",
+        # xlabel="Time [s]",
         ylabel="Temperature [C]",
         # xmin = -0.1, 
         # xmax = 101,
         # ymin = 3.75,
         # ymax = 4.2,
         # xtick = 0:20:100,
-        legend_pos= "south west"
+        legend_pos= "south east"
     },
-    # Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"], y = p40_discharge[:,"Aux_Temperature_1(C)"])),
-    # LegendEntry("Model 1 - 140 kPa"),
-    Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = p200_discharge[:,"Step_Time(s)"], y = p200_discharge[:,"Aux_Temperature_1(C)"])),
-    # LegendEntry("Model 1 - 210 kPa"),
-    # Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"], y = p50csv[:,"Aux_Temperature_1(C)"])),
-    # LegendEntry("Model 2 - 50 kPa"),
-    Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p100csv[:,"Step_Time(s)"], y = p100csv[:,"Aux_Temperature_1(C)"])),
-    # LegendEntry("Model 2 - 100 kPa"),
+    Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"]./3600, y = p40_discharge[:,"Aux_Temperature_1(C)"])),
+    LegendEntry("Cell 1 - 40 kPa"),
+    # Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = p200_discharge[:,"Step_Time(s)"], y = p200_discharge[:,"Voltage(V)"])),
+    # LegendEntry("Cell 1 - 210 kPa"),
+    Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"]./3600, y = p50csv[:,"Aux_Temperature_1(C)"])),
+    LegendEntry("Cell 2 - 50 kPa"),
+    # Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p100csv[:,"Step_Time(s)"], y = p100csv[:,"Voltage(V)"])),
+    # LegendEntry("Cell 2 - 100 kPa"),
 
+    {
+        # xlabel="Time [s]",
+        ylabel="Pressure [kPa]",
+        # xmin = -0.1, 
+        # xmax = 101,
+        # ymin = 3.35,
+        # ymax = 3.8,
+        # xtick = 0:20:100,
+        # legend_pos= "south east"
+    },
+
+    Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"]./3600, y = p50csv[:,"Pressure"])),
+    # LegendEntry("0 kPa"),
+    Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"]./3600, y = p40_discharge[:,"Pressure"]./1000)),
+
+
+    {
+        xlabel="Time [hours]",
+        ylabel="Temperature [C]",
+        # xmin = -0.1, 
+        # xmax = 101,
+        # ymin = 3.75,
+        # ymax = 4.2,
+        # xtick = 0:20:100,
+        legend_pos= "south east"
+    },
+    # Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"], y = p40_discharge[:,"Voltage(V)"])),
+    # LegendEntry("Model 1 - 40 kPa"),
+    Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = p200_discharge[:,"Step_Time(s)"]./3600, y = p200_discharge[:,"Aux_Temperature_1(C)"])),
+    LegendEntry("Cell 1 - 210 kPa"),
+    # Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"], y = p50csv[:,"Voltage(V)"])),
+    # LegendEntry("Model 2 - 50 kPa"),
+    Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p100csv[:,"Step_Time(s)"]./3600, y = p100csv[:,"Aux_Temperature_1(C)"])),
+    LegendEntry("Cell 2 - 100 kPa"),
+
+    {
+        xlabel="Time [hours]",
+        ylabel="Pressure [kPa]",
+        # xmin = -0.1, 
+        # xmax = 101,
+        # ymin = 3.35,
+        # ymax = 3.8,
+        # xtick = 0:20:100,
+        # legend_pos= "south east"
+    },
+
+    # Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"], y = p50csv[:,"Pressure"])),
+    # LegendEntry("0 kPa"),
+    Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p100csv[:,"Step_Time(s)"]./3600, y = p100csv[:,"Pressure"])),
+    # LegendEntry("50 kPa"),
+    # Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"], y = p40_discharge[:,"Pressure"]./1000)),
+    Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = p200_discharge[:,"Step_Time(s)"]./3600, y = p200_discharge[:,"Pressure"]./1000)),
+    # LegendEntry("50 kPa"),
 
 
 )
+
+
 
 
 Pulsezoom_plot = @pgf GroupPlot(
@@ -529,20 +637,22 @@ Pulsezoom_plot = @pgf GroupPlot(
 
 )
 
-SOH_plot = @pgf Axis(
+SOH_plot = @pgf GroupPlot(
 
 
-    # {
-    #     group_style =
-    #     {
-    #         group_size="2 by 1",
-    #         xticklabels_at="edge bottom",
-    #         # yticklabels_at="edge left",
-    #         # legend_pos= "north west"
-    #     },
-    #     height = "8cm", width = "10cm",    
+    {
+        group_style =
+        {
+            group_size="2 by 1",
+            xticklabels_at="edge bottom",
+            horizontal_sep = "2cm"
+            # yticklabels_at="edge left",
+            # legend_pos= "north west"
+        },
+        height = "8cm", width = "10cm",    
 
-    # },
+    },
+
     {
         height = "8cm", width = "15cm",
         xlabel="Cycle",
@@ -563,6 +673,26 @@ SOH_plot = @pgf Axis(
     Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = SOH_100[:,1], y = SOH_100[:,2])),
     LegendEntry("100 kPa"),
 
+    {
+        height = "8cm", width = "15cm",
+        xlabel="Cycle",
+        ylabel="Pressure [kPa]",
+        xmin = -0.1, 
+        xmax = 101,
+        # ymin = 0.975,
+        # ymax = 1.005,
+        # ytick = 0.98:0.01:1.00,
+        xtick = 0:10:100,
+        legend_pos= "south east"
+    },
+
+    # Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = SOH_0[:,1], y = SOH_0[:,2])),
+    # LegendEntry("0 kPa"),
+    Plot({color = Ϟ[5], "thick", style={"dashed"}}, Table({x = "x", y = "y"}, x = SOH_50[:,1], y = SOH_50[:,4]./1000)),
+    LegendEntry("50 kPa"),
+    Plot({color = Ϟ[6], "thick", style={"dashed"}}, Table({x = "x", y = "y"}, x = SOH_100[:,1], y = SOH_100[:,4]./1000)),
+    LegendEntry("100 kPa"),
+
 
 )
 
@@ -572,24 +702,26 @@ dis_plot = @pgf GroupPlot(
     {
         group_style =
         {
-            group_size="1 by 2",
+            group_size="2 by 1",
             xticklabels_at="edge bottom",
-            yticklabels_at="edge left",
+            # yticklabels_at="edge left",
             # legend_pos= "north west"
+            horizontal_sep = "2cm"
         },
-        height = "8cm", width = "20cm",    
+        height = "7cm", width = "8cm",    
 
     },
     {
         # height = "8cm", width = "15cm",
         # xlabel="Cycle",
+        xlabel="Discharge Capacity [Ah]",
         ylabel="Voltage [V]",
-        xmin = -0.1, 
-        xmax = 6,
-        # ymin = 0.975,
-        # ymax = 1.005,
+        xmin = 5.4, 
+        xmax = 5.7,
+        ymin = 2.98,
+        ymax = 3.6,
         # ytick = 0.98:0.01:1.00,
-        # xtick = 0:0.5:6,
+        xtick = 0:0.1:5.8,
         legend_pos= "north east"
     },
 
@@ -603,13 +735,13 @@ dis_plot = @pgf GroupPlot(
     {
         # height = "8cm", width = "15cm",
         xlabel="Discharge Capacity [Ah]",
-        ylabel="Voltage [V]",
-        xmin = -0.1, 
-        xmax = 6,
-        # ymin = 0.975,
-        # ymax = 1.005,
+        # ylabel="Voltage [V]",
+        xmin = 5.3, 
+        xmax = 5.6,
+        ymin = 2.98,
+        ymax = 3.6,
         # ytick = 0.98:0.01:1.00,
-        xtick = 0:0.5:6,
+        xtick = 0:0.1:5.8,
         legend_pos= "north east"
     },
 
@@ -623,7 +755,7 @@ dis_plot = @pgf GroupPlot(
 
 )
 
-Ω_plot = @pgf Axis(
+ Ω_plot = @pgf Axis(
 
     {
         height = "8cm", width = "15cm",

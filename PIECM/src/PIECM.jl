@@ -110,7 +110,7 @@ end
 
 function hppc_pulse(data, soc, soc_increment, pulse_rate, dis_pulse_step, char_pulse_step)
 	
-    df = filter(row -> row."TC_Counter1" == ((100 - soc) / soc_increment), data)
+    df = filter(row -> row."TC_Counter1" == round(((100 - soc) / soc_increment)), data)
 	# df = filter(row -> row."Step_Index" == dis_pulse_step || row."Step_Index" == char_pulse_step || row."Step_Index" == (char_pulse_step-1)|| row."Step_Index" == (char_pulse_step+1) || row."Step_Index" == (dis_pulse_step-1), df)
 	
 	d = filter(row -> row."Step_Index" == dis_pulse_step || row."Step_Index" == char_pulse_step || row."Step_Index" == (char_pulse_step-1)|| row."Step_Index" == (char_pulse_step+1) || row."Step_Index" == (dis_pulse_step-1), df)
@@ -206,18 +206,22 @@ end
 
 
 function Capacity_Fade(df, d_stepinit, d_step)
-	SOH = Array{Float64}(undef, 6, 3)
+	SOH = Array{Float64}(undef, 6, 4)
 	
 	discharge = filter(row -> row.Step_Index == d_step, df)
 	capinit = filter(row -> row.Step_Index == d_stepinit, df)[end, "Discharge_Capacity(Ah)"] - filter(row -> row.Step_Index == d_stepinit, df)[1, "Discharge_Capacity(Ah)"]
 	energyinit = filter(row -> row.Step_Index == d_stepinit, df)[end, "Discharge_Energy(Wh)"] - filter(row -> row.Step_Index == d_stepinit, df)[1, "Discharge_Energy(Wh)"]
-	SOH[1,:] = [0.0,100.0, energyinit]
+	# presinit = mean(skipmissing(filter(row -> row.Step_Index == d_stepinit, df)[:, "Pressure"]))
+	presinit = filter(row -> row.Step_Index == d_stepinit, df)[1, "Pressure"]
+	SOH[1,:] = [0.0,100.0, energyinit, presinit]
 	j = 1
 
 	for i in 21:20:101
 		Qtemp = filter(row -> row.Cycle_Index == i, discharge)[end, "Discharge_Capacity(Ah)"] - filter(row -> row.Cycle_Index == i, discharge)[1, "Discharge_Capacity(Ah)"]
 		Etemp = filter(row -> row.Cycle_Index == i, discharge)[end, "Discharge_Energy(Wh)"] - filter(row -> row.Cycle_Index == i, discharge)[1, "Discharge_Energy(Wh)"]
-		SOH[j+1,:] = [i, Qtemp / capinit * 100, Etemp]
+		# Ptemp = mean(skipmissing(filter(row -> row.Cycle_Index == i, discharge)[:, "Pressure"]))
+		Ptemp = filter(row -> row.Cycle_Index == i, discharge)[1, "Pressure"]
+		SOH[j+1,:] = [i, Qtemp / capinit * 100, Etemp, Ptemp]
 		j += 1
 	end
 

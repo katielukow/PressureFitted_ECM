@@ -8,9 +8,10 @@ plotly()
 mbpf25kpa = data_import_csv("data/HPPC/230320_MBPF_Investigation_25kpa_11_0043_Channel_6_Wb_1.csv", "old")
 mbpf40kpa = data_import_csv("data/HPPC/230320_MBPF_Investigation_40kpa_11_0048_Channel_6_Wb_1.csv", "old")
 mbpf130kpa = data_import_csv("data/HPPC/230320_MBPF_Investigation_130kpa_11_0044_Channel_5_Wb_1.csv", "old")
-ocv = pocv("data/OCV/220310_BTC_POCV_GITT_Mel_SLPB7336128HV_1_25C_Channel_5_Wb_1.csv", 5, 8, 1000)
+ocv1 = pocv("data/OCV/220310_BTC_POCV_GITT_Mel_SLPB7336128HV_1_25C_Channel_5_Wb_1.csv", 5, 8, 1000)
+ocv2 = pocv("data/OCV/230621_MBPF_PCharact_POCV_Mel_SLPBA442124_0kpa_25C_Channel_3_Wb_1.csv", 11, 13, 1000)
 
-soc = 0.8
+soc = 0.9
 mbpf25kpa_1 = hppc_fun(mbpf25kpa, soc*100, 10, 1, 17, 19, 1)
 mbpf40kpa_1 = hppc_fun(mbpf40kpa, soc*100, 10, 1, 20, 22, 1)
 mbpf130kpa_1 = hppc_fun(mbpf130kpa, soc*100, 10, 1, 20, 22, 1)
@@ -39,13 +40,13 @@ mbpf_100kpa.Date_Time .= replace.(mbpf_100kpa.Date_Time, "\t" => "")
 # uᵢ = data."Current(A)"
 # Δ = data."Test_Time(s)"
 η = 0.999
-Q = 3.7
+Q = 5.5
 
 # costfunction_closed1 = κ->costfunction(κ, 1, uᵢ, Δ, η, Q, ocv, soc, data) 
 # costfunction_closed3 = κ->costfunction(κ, 3, uᵢ, Δ, η, Q, ocv, soc, data) 
 
 #-----------------------Initial Conditions--------------------------
-x2 = [0.01, 0.01, 2000, 2000, 0.008]
+x2 = [0.01, 0.01, 2000, 2000, 0.010]
 
 # ---------------------------Optimisation-----------------------------
 
@@ -57,32 +58,55 @@ x2 = [0.01, 0.01, 2000, 2000, 0.008]
 
 
 function ecmrmse(data_in, soc, xi, ocv)
-    data = hppc_fun(data_in, soc*100, 10, 1, 20, 22, 1)
+    data = hppc_fun(data_in, soc*100, 10, 1, 19, 21, 1)
     uᵢ = data."Current(A)"
     Δ = data."Test_Time(s)"
 
-    costfunction_closed2 = κ->costfunction(κ, 2, uᵢ, Δ, η, Q, ocv, soc, data) 
+    data2 = hppc_fun(mbpf130kpa, soc*100, 10, 1, 19, 21, 1)
+
+    costfunction_closed2 = κ->costfunction(κ, 2, uᵢ, Δ, 0.999, 3.7, ocv, soc, data)
 
 
     res = optimize(costfunction_closed2, xi, iterations = 10000)
     x = Optim.minimizer(res)
-    v2 = ecm_discrete(x, 2, data."Current(A)", data."Test_Time(s)", 0.9997, 3.7, ocv, soc)
+    v2 = ecm_discrete(x, 2, data2."Current(A)", data2."Test_Time(s)", 0.999, 3.7, ocv, soc)
 
-    return rmsd(v2, data."Voltage(V)"[1:end-1])
+    return rmsd(v2, data2."Voltage(V)"[1:end-1])
 
 end
 
 rmses = Array{Float64}(undef, 10)
-for i in .1:0.1:1
-    ξ = ecmrmse(mbpf130kpa, i, x2, ocv)
+for i in .1:0.1:0.9
+    ξ = ecmrmse(mbpf40kpa, i, x2, ocv1)
     println(ξ)
     rmses[Int(i*10)] = ξ
 end
 
+# test = ecmrmse(P0kpa, 0.8, x2, ocv2)
+
 # println(rmses)
 println(mean(rmses, weights(ones(10))))
 
+# ecmrmse(P0kpa, 0.1, x2, ocv2)
+
+soc = 0.2
+data = hppc_fun(mbpf40kpa, soc*100, 10, 1, 19, 21, 1)
+data130 = hppc_fun(mbpf130kpa, soc*100, 10, 1, 19, 21, 1)
+uᵢ = data."Current(A)"
+Δ = data."Test_Time(s)"
+
+
+costfunction_closed2 = κ->costfunction(κ, 2, uᵢ, Δ, η, Q, ocv2, soc, data) 
+
+
+res = optimize(costfunction_closed2, x2, iterations = 10000)
+x = Optim.minimizer(res)
+v2 = ecm_discrete(x, 2, data."Current(A)", data."Test_Time(s)", 0.9997, 5.5, ocv2, soc)
+
 # println(rmsd(v2, data."Voltage(V)"[1:end-1]))
+
+# plot!(v2)
+# plot(data."Voltage(V)"[1:end-1])
 
 # res3 = optimize(costfunction_closed3, x3, iterations = 10000)
 # x3 = Optim.minimizer(res3)
@@ -92,33 +116,34 @@ println(mean(rmses, weights(ones(10))))
 # println(minimum(res2))
 # println(minimum(res3))
 
-# P_plot = @pgf GroupPlot(
+P_plot = @pgf GroupPlot(
 
-#     {
-#         group_style =
-#         {
-#             xticklabels_at="edge bottom",
-#         },
-#         height = "8cm", width = "12cm",
-#         legend_pos= "south east"
+    {
+        group_style =
+        {
+            xticklabels_at="edge bottom",
+        },
+        height = "8cm", width = "10cm",
+        legend_pos= "south east"
 
-#     },
 
-#     {
-#         xlabel="Time [s]",
-#         ylabel="Voltage [V]",
-#         xmin = -0.1, 
-#         xmax = 70,
-#         # ymax = 15,
-#         # ymin = 0,
-#         # xtick = 0:10:100,
-#     },
+    },
 
-#     Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = data[:,"Test_Time(s)"], y = data[:,"Voltage(V)"])),
-#     LegendEntry("0 kPa Experimental"),
-#     # Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = mbpf0kpa_101[5:end,"Test_Time(s)"].-mbpf0kpa_101[5,"Test_Time(s)"], y = mbpf0kpa_101[5:end,"Voltage(V)"])),
-#     LegendEntry("0 kPa cycle 101 Experimental"),
-#     Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = data[1:end-1,"Test_Time(s)"], y = v2)),
-#     LegendEntry("ECM"),
+    {
+        xlabel="Time [s]",
+        ylabel="Voltage [V]",
+        xmin = -0.1, 
+        xmax = 65,
+        # ymax = 15,
+        # ymin = 0,
+        # xtick = 0:10:100,
+    },
 
-# )
+    Plot({color = Ϟ[5], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = data[:,"Test_Time(s)"], y = data[:,"Voltage(V)"])),
+    LegendEntry("47 kPa Experimental"),
+    Plot({color = Ϟ[7], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = data130[:,"Test_Time(s)"], y = data130[:,"Voltage(V)"])),
+    LegendEntry("210 kPa Experimental"),
+    Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = data[1:end-1,"Test_Time(s)"], y = v2)),
+    LegendEntry("Pressure Fitted ECM"),
+
+)
