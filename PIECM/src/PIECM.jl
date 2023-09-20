@@ -1,10 +1,10 @@
 module PIECM
 
 using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, XLSX, Statistics, DataStructures
-using StatsBase: L2dist
+using StatsBase: L2dist, rmsd
  
 export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv, sqrzeros, HPPC, hppc_fun
-export ecm_discrete, costfunction, HPPC_n, data_imp, pres_avg, Capacity_Fade
+export ecm_discrete, costfunction, HPPC_n, data_imp, pres_avg, Capacity_Fade, costfunction_rmsd
 
 # --------------- Fitting data import and filtering -----------------------------
 
@@ -203,8 +203,6 @@ function hppc_calc(dataframe, i, init_V)
 	return [r, P_avg, t[1], t[2], t[3], t[4]]
 end
 
-
-
 function Capacity_Fade(df, d_stepinit, d_step)
 	SOH = Array{Float64}(undef, 6, 4)
 	
@@ -349,6 +347,11 @@ end
 function costfunction(x, n_RC, uᵢ, Δ, η, Q, OCV, Init_SOC, data)
 	v = ecm_discrete(x, n_RC, uᵢ, Δ, η, Q, OCV, Init_SOC)
 	return L2dist(v,data[1:end-1,"Voltage(V)"]) 
+end
+
+function costfunction_rmsd(x, n_RC, uᵢ, Δ, η, Q, OCV, Init_SOC, data)
+	v = ecm_discrete(x, n_RC, uᵢ, Δ, η, Q, OCV, Init_SOC)
+	return rmsd(v,data[1:end-1,"Voltage(V)"]) 
 end
 
 # function costfunction_closed(x)
