@@ -4,7 +4,7 @@ using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, XLSX, Statistic
 using StatsBase: L2dist, rmsd
  
 export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv, sqrzeros, HPPC, hppc_fun
-export ecm_discrete, costfunction, HPPC_n, data_imp, pres_avg, Capacity_Fade, costfunction_rmsd
+export ecm_discrete, costfunction, HPPC_n, data_imp, pres_avg, Capacity_Fade
 
 # --------------- Fitting data import and filtering -----------------------------
 
@@ -344,12 +344,8 @@ function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, Init_SOC)
 
 end
 
-function costfunction(x, n_RC, uᵢ, Δ, η, Q, OCV, Init_SOC, data)
-	v = ecm_discrete(x, n_RC, uᵢ, Δ, η, Q, OCV, Init_SOC)
-	return L2dist(v,data[1:end-1,"Voltage(V)"]) 
-end
 
-function costfunction_rmsd(x, n_RC, uᵢ, Δ, η, Q, OCV, Init_SOC, data)
+function costfunction(x, n_RC, uᵢ, Δ, η, Q, OCV, Init_SOC, data)
 	v = ecm_discrete(x, n_RC, uᵢ, Δ, η, Q, OCV, Init_SOC)
 	return rmsd(v,data[1:end-1,"Voltage(V)"]) 
 end

@@ -1,6 +1,6 @@
 using PIECM, Plots, Optim, Statistics, PGFPlotsX, LaTeXStrings, StatsBase, BenchmarkTools
 
-BenchmarkTools.DEFAULT_PARAMETERS.seconds = 10
+BenchmarkTools.DEFAULT_PARAMETERS.seconds = 60
 # plotly()
 Ϟ = distinguishable_colors(10)
 # gr() 
@@ -39,6 +39,7 @@ uᵢ = data."Current(A)"
 Q = 5.5
 ocv = ocv2
 x1 = [0.01, 2000, 0.005]
+x2 = [0.01, 0.01, 2000, 2000, 0.005]
 
 costfunction_closed = κ->costfunction(κ, 1, uᵢ, Δ, η, Q, ocv, soc, data)
 res = optimize(costfunction_closed, [0.01, 2000, 0.005], iterations = 10000)
@@ -46,14 +47,15 @@ x = Optim.minimizer(res)
 v = ecm_discrete(x, 1, data."Current(A)", data."Test_Time(s)", η, Q, ocv, soc)
 t = @benchmark optimize(costfunction_closed, x1)
 
-costfunction_closed_rmsd = κ->costfunction_rmsd(κ, 1, uᵢ, Δ, η, Q, ocv, soc, data)
-res_rmsd = optimize(costfunction_closed_rmsd, [0.01, 2000, 0.005], iterations = 10000)
-x_rmsd = Optim.minimizer(res_rmsd)
-v_rmsd = ecm_discrete(x_rmsd, 1, data."Current(A)", data."Test_Time(s)", η, Q, ocv, soc)
-t_rmsd = @benchmark optimize(costfunction_closed_rmsd, x1)
+costfunction_closed2 = κ->costfunction(κ, 2, uᵢ, Δ, η, Q, ocv, soc, data)
+res2 = optimize(costfunction_closed2, x2, iterations = 10000)
+x2 = Optim.minimizer(res2)
+v2 = ecm_discrete(x2, 2, data."Current(A)", data."Test_Time(s)", η, Q, ocv, soc)
+t2 = @benchmark optimize(costfunction_closed2, x2)
 
-print("L2Dist: ", rmsd(v, data."Voltage(V)"[1:end-1]), " RMSD: ", rmsd(v_rmsd, data."Voltage(V)"[1:end-1]), "\n")
-# print("L2Dist: ", t, "RMSD: ", t_rmsd, "\n")
+print("1RC: ", median(t), "   ", rmsd(v, data."Voltage(V)"[1:end-1]), "\n")
+print("2RC: ", median(t2), "   ", rmsd(v2, data."Voltage(V)"[1:end-1]), "\n")
+
 
 
 
