@@ -303,6 +303,8 @@ function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, Init_SOC)
     v = Array{Float64}(undef, length(uᵢ))
     τ = Array{Float64}(undef, length(Δ))
 
+	uᵢ = -uᵢ # Changes charge / discharge convention to match Plett ISBN:978-1-63081-023-8
+
 	# Change time vector to τ for each index 
 	Δ .-= Δ[1]
 	for i in 1:length(Δ)-1
@@ -316,11 +318,15 @@ function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, Init_SOC)
 	γ = 1
 
     for k in 1:length(uᵢ)-1
-		for α in 1:n_RC
-			F = exp(-τ[k]/(x[α]*x[(n_RC+α)]))
-			A_RC[α,α] = F
-			B_RC[α] = (1-F)
-		end
+		# for α in 1:n_RC
+		# 	F = exp(-τ[k]/(x[α]*x[(n_RC+α)]))
+		# 	A_RC[α,α] = F
+		# 	B_RC[α] = (1-F)
+		# end
+
+		F = exp(-τ[k]/(x[1]*x[2]))
+		A_RC = F
+		B_RC = (1-F)
 
 		if (uᵢ[k+1] != 0)
 			s[k+1] = sign(uᵢ[k+1])
@@ -328,15 +334,19 @@ function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, Init_SOC)
 			s[k] = s[k]
 		end
 
-		Ah[k] = exp(-abs(η * uᵢ[k] * γ * τ[k]) / Q)
+		# Ah[k] = exp(-abs(η * uᵢ[k] * γ * τ[k]) / Q)
 
-        z[k+1] = z[k] - (η*((τ[k+1])/3600) / Q) * -uᵢ[k]
+        z[k+1] = z[k] - (η*((τ[k+1])/3600) / Q) * uᵢ[k]
 
-		iᵣ[k+1,:] = (A_RC * iᵣ[k,:] + B_RC * -uᵢ[k])'
+		@infiltrate cond = true
 
-		h[k+1] = Ah[k] * h[k] + (Ah[k] -1) * sign(uᵢ[k])
+		iᵣ[k+1] = (A_RC * iᵣ[k] + B_RC * uᵢ[k])
 
-		v[k] = interp_linear(z[k]) - sum(x[1:n_RC] .* iᵣ[k,:]') - (x[end] * -uᵢ[k]) 
+		# h[k+1] = Ah[k] * h[k] + (Ah[k] -1) * sign(uᵢ[k])
+
+		v[k] = interp_linear(z[k]) -  x[1] .* iᵣ[k] - (x[end] * uᵢ[k]) 
+
+		# v[k] = interp_linear(z[k]) - sum(x[1:n_RC] .* iᵣ[k,:]') - (x[end] * uᵢ[k]) 
 		# + x[n_RC*2 + 1 + 1] * s[k] + x[n_RC*2 + 1 + 2] * h[k]
     end
 
@@ -349,31 +359,5 @@ function costfunction(x, n_RC, uᵢ, Δ, η, Q, OCV, Init_SOC, data)
 	v = ecm_discrete(x, n_RC, uᵢ, Δ, η, Q, OCV, Init_SOC)
 	return rmsd(v,data[1:end-1,"Voltage(V)"]) 
 end
-
-# function costfunction_closed(x)
-	
-# 	# data import
-# 	cd₁ = data_import("data/HPPC/220729_CPF_HPPC_Melasta_SLPB7336128HV_11_0041_90kPa_25C_Channel_7_Wb_1.csv")
-# 	hppc = hppc_pulse(cd₁, 55, 5, 1, 15, 17)
-# 	hppc."Test_Time(s)" .-= hppc."Test_Time(s)"[1]
-
-# 	ocvd₁ = data_import("data/OCV/220310_BTC_POCV_GITT_Mel_SLPB7336128HV_1_25C_Channel_5_Wb_1.csv")
-# 	ocv₁ = pocv_calc(ocvd₁, 5, 8, 1000)
-
-# 	# Forward model parameters
-
-# 	# n_RC = (length(x) - 1) ÷ 2
-# 	n_RC = 2
-# 	# uᵢ = [ones(100).*-27.49736; ones(400).*0; ones(100).*5.998779 ;ones(400).*0]
-# 	uᵢ = hppc."Current(A)"
-# 	Δ = hppc."Test_Time(s)"  
-# 	η = 0.999
-# 	Q = 3.7
-# 	Init_SOC = 55
-
-#     return costfunction(hppc, x, n_RC, uᵢ, Δ, η, Q, ocv₁, Init_SOC)
-
-# end 
-
 
 end
