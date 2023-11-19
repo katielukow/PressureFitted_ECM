@@ -1,4 +1,4 @@
-using PIECM, Plots, Optim, Statistics, PGFPlotsX, LaTeXStrings, StatsBase, BenchmarkTools, DataStructures, DataFrames, Infiltrator
+using PIECM, Optim, Statistics, PGFPlotsX, LaTeXStrings, StatsBase, BenchmarkTools, DataStructures, DataFrames, Infiltrator
 
 BenchmarkTools.DEFAULT_PARAMETERS.seconds = 60
 # plotly()
@@ -43,65 +43,22 @@ mod2_dic = Dict(
     "mbpf100kpa" => mbpf100kpa,
 )
 
-function ecm_fit(data, Q, ocv, soc, x0)
-    uᵢ = data."Current(A)"
-    Δ = data."Test_Time(s)"
-    η = 0.999
-    costfunction_closed = κ->costfunction(κ, 1, uᵢ, Δ, η, Q, ocv, soc, data)
-    res = optimize(costfunction_closed, x0, iterations = 10000)
-    x = Optim.minimizer(res)
-    v = ecm_discrete(x, 1, data."Current(A)", data."Test_Time(s)", η, Q, ocv, soc)
-    return v, x, res
-end
 
-function soc_loop(data, max_soc, min_soc, Q, ocv, dis_step, char_step, soc_step)
-    print("-------------- \n")
-    vmod = OrderedDict()
-    xmod = DataFrame([[],[],[],[]], ["SOC", "R1", "C1", "R0"])
-    err = DataFrame([[],[]], ["RMSE", "MaxError"])
-    for j in min_soc:0.1:max_soc
-        hppcdata = hppc_fun(data, j*100, soc_step, 1, dis_step, char_step, 1)
-        vtemp, xtemp = ecm_fit(hppcdata, Q, ocv, j, [0.005, 4000, 0.005])
-        push!(xmod, [j, xtemp[1], xtemp[2], xtemp[3]])
-        push!(err, [rmsd(vtemp, hppcdata[:,"Voltage(V)"][1:end-1]), maximum(vtemp.-hppcdata[:,"Voltage(V)"][1:end-1])])
-        vmod[j] = [vtemp, hppcdata[:,"Test_Time(s)"][1:end-1]]
-        # print("RMSE:", rmsd(vtemp, hppcdata[:,"Voltage(V)"][1:end-1]))
-        # print(" Max error:",maximum(vtemp.-hppcdata[:,"Voltage(V)"][1:end-1]),"\n")
-    end
-    return vmod, xmod, err
-end
 
 v25,x25, err25 = soc_loop(mbpf25kpa, 1.0, 0.1, 3.7, ocv1, 17, 19, 10);
-v40,x40, err40 = soc_loop(mbpf40kpa, 1.0, 0.1, 3.7, ocv1, 20, 22, 10);
-v130,x130, err130 = soc_loop(mbpf130kpa, 1.0, 0.1, 3.7, ocv1, 20, 22, 10);
-v0,x0, err0 = soc_loop(P0kpa, 1.0, 0.1, 5.5, ocv2, 19, 21, 5);
-v50,x50, err50 = soc_loop(mbpf50kpa, 1.0, 0.1, 5.5, ocv2, 19, 21, 5);
-v100,x100, err100 = soc_loop(mbpf100kpa, 1.0, 0.1, 5.5, ocv2, 19, 21, 5);
+# v40,x40, err40 = soc_loop(mbpf40kpa, 1.0, 0.1, 3.7, ocv1, 20, 22, 10);
+# v130,x130, err130 = soc_loop(mbpf130kpa, 1.0, 0.1, 3.7, ocv1, 20, 22, 10);
+# v0,x0, err0 = soc_loop(P0kpa, 1.0, 0.1, 5.5, ocv2, 19, 21, 5);
+# v50,x50, err50 = soc_loop(mbpf50kpa, 1.0, 0.1, 5.5, ocv2, 19, 21, 5);
+# v100,x100, err100 = soc_loop(mbpf100kpa, 1.0, 0.1, 5.5, ocv2, 19, 21, 5);
 
 
-function incorrect_pres(model_data, exp_data, dis_step, char_step, soc_step)
-    err = Array{Float64}(undef, length(model_data),2)
-    k = 1
-    for i in eachindex(model_data)
-        data = hppc_fun(exp_data, i*100, soc_step, 1, dis_step, char_step, 1)[:,"Voltage(V)"]
-        if length(data) > length(model_data[i][1])
-            err[k,1] = rmsd(model_data[i][1], data[1:end-(length(data)-length(model_data[i][1]))])
-            err[k,2] = maximum(abs.(model_data[i][1] .- data[1:end-(length(data)-length(model_data[i][1]))]))
-        else 
-            err[k,1] = rmsd(model_data[i][1][1:end-(length(model_data[i][1])-length(data))], data)
-            err[k,2] = maximum(abs.(model_data[i][1][1:end-(length(model_data[i][1])-length(data))] .- data))
-        end
+# err25_40 = incorrect_pres(v25, mbpf40kpa, 20, 22, 10)
+# err25_130 = incorrect_pres(v25, mbpf130kpa, 20, 22, 10)
+# err0_50 = incorrect_pres(v0, mbpf50kpa, 19, 21, 5)
+# err0_100 = incorrect_pres(v0, mbpf100kpa, 19, 21, 5)
 
-        k += 1
-    end
 
-    return err
-end
-
-err25_40 = incorrect_pres(v25, mbpf40kpa, 20, 22, 10)
-err25_130 = incorrect_pres(v25, mbpf130kpa, 20, 22, 10)
-err0_50 = incorrect_pres(v0, mbpf50kpa, 19, 21, 5)
-err0_100 = incorrect_pres(v0, mbpf100kpa, 19, 21, 5)
 
 
 
@@ -210,62 +167,62 @@ err0_100 = incorrect_pres(v0, mbpf100kpa, 19, 21, 5)
 #     LegendEntry("100 kPa Experimental"),
 # )
 
-err_plot = @pgf GroupPlot(
+# err_plot = @pgf GroupPlot(
 
-    {
-        group_style =
-        {
-            group_size = "2 by 1",
-            xticklabels_at="edge bottom",
-            yticklabels_at="edge left",
-            horizontal_sep = "0.5cm",
-            vertical_sep = "0.5cm"
-        },
-        height = "6cm", width = "10cm",
-        legend_pos= "south east"
-    } ,
+#     {
+#         group_style =
+#         {
+#             group_size = "2 by 1",
+#             xticklabels_at="edge bottom",
+#             yticklabels_at="edge left",
+#             horizontal_sep = "0.5cm",
+#             vertical_sep = "0.5cm"
+#         },
+#         height = "6cm", width = "10cm",
+#         legend_pos= "south east"
+#     } ,
     
-    {
-        xlabel="Time [s]",
-        ylabel="Voltage [V]",
-        xmin = -0.1, 
-        xmax = 65,
-        # ymax = 15,
-        # ymin = 0,
-        # ytick = 0.005:0.002:0.016,
-        # xtick = 0:10:100,
-    },
-    Plot({color = Ϟ[5], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = v25[soc][2], y = v25[soc][1])),
-    LegendEntry("25 kPa ECM"),
-    Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = mbpf25kpa_1[:,"Test_Time(s)"], y = mbpf25kpa_1[:,"Voltage(V)"])),
-    LegendEntry("25 kPa Experimental"),
-    Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = mbpf40kpa_1[:,"Test_Time(s)"], y = mbpf40kpa_1[:,"Voltage(V)"])),
-    LegendEntry("40 kPa Experimental"),
-    Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = mbpf130kpa_1[:,"Test_Time(s)"], y = mbpf130kpa_1[:,"Voltage(V)"])),
-    LegendEntry("130 kPa Experimental"),
+#     {
+#         xlabel="Time [s]",
+#         ylabel="Voltage [V]",
+#         xmin = -0.1, 
+#         xmax = 65,
+#         # ymax = 15,
+#         # ymin = 0,
+#         # ytick = 0.005:0.002:0.016,
+#         # xtick = 0:10:100,
+#     },
+#     Plot({color = Ϟ[5], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = v25[soc][2], y = v25[soc][1])),
+#     LegendEntry("25 kPa ECM"),
+#     Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = mbpf25kpa_1[:,"Test_Time(s)"], y = mbpf25kpa_1[:,"Voltage(V)"])),
+#     LegendEntry("25 kPa Experimental"),
+#     Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = mbpf40kpa_1[:,"Test_Time(s)"], y = mbpf40kpa_1[:,"Voltage(V)"])),
+#     LegendEntry("40 kPa Experimental"),
+#     Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = mbpf130kpa_1[:,"Test_Time(s)"], y = mbpf130kpa_1[:,"Voltage(V)"])),
+#     LegendEntry("130 kPa Experimental"),
 
-    {
-        xlabel="Time [s]",
-        ylabel="Voltage [V]",
-        xmin = -0.1, 
-        xmax = 65,
-        # ymax = 15,
-        # ymin = 0,
-        # ytick = 0.005:0.002:0.016,
-        # xtick = 0:10:100,
-    },
-    Plot({color = Ϟ[5], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = v0[soc][2], y = v0[soc][1])),
-    LegendEntry("0 kPa ECM"),
-    Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = mbpf0kpa_1[:,"Test_Time(s)"], y = mbpf0kpa_1[:,"Voltage(V)"])),
-    LegendEntry("0 kPa Experimental"),
-    Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = mbpf50kpa_1[:,"Test_Time(s)"], y = mbpf50kpa_1[:,"Voltage(V)"])),
-    LegendEntry("50 kPa Experimental"),
-    Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = mbpf100kpa_1[:,"Test_Time(s)"], y = mbpf100kpa_1[:,"Voltage(V)"])),
-    LegendEntry("100 kPa Experimental"),
+#     {
+#         xlabel="Time [s]",
+#         ylabel="Voltage [V]",
+#         xmin = -0.1, 
+#         xmax = 65,
+#         # ymax = 15,
+#         # ymin = 0,
+#         # ytick = 0.005:0.002:0.016,
+#         # xtick = 0:10:100,
+#     },
+#     Plot({color = Ϟ[5], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = v0[soc][2], y = v0[soc][1])),
+#     LegendEntry("0 kPa ECM"),
+#     Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = mbpf0kpa_1[:,"Test_Time(s)"], y = mbpf0kpa_1[:,"Voltage(V)"])),
+#     LegendEntry("0 kPa Experimental"),
+#     Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = mbpf50kpa_1[:,"Test_Time(s)"], y = mbpf50kpa_1[:,"Voltage(V)"])),
+#     LegendEntry("50 kPa Experimental"),
+#     Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = mbpf100kpa_1[:,"Test_Time(s)"], y = mbpf100kpa_1[:,"Voltage(V)"])),
+#     LegendEntry("100 kPa Experimental"),
 
 
-)
-pgfsave("figures/errpot.pdf", err_plot, include_preamble = false)
+# )
+# pgfsave("figures/errpot.pdf", err_plot, include_preamble = false)
 
 # RCR0_plot = @pgf GroupPlot(
 
@@ -407,4 +364,3 @@ pgfsave("figures/errpot.pdf", err_plot, include_preamble = false)
 #     LegendEntry("Pressure Fitted ECM"),
 
 # )
-|

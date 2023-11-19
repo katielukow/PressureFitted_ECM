@@ -1,10 +1,10 @@
 module PIECM
 
-using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, XLSX, Statistics, DataStructures
-using StatsBase: L2dist, rmsd
+using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, XLSX, Statistics, DataStructures, Optim
+using StatsBase: sqL2dist, rmsd
  
 export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv, sqrzeros, HPPC, hppc_fun
-export ecm_discrete, costfunction, HPPC_n, data_imp, pres_avg, Capacity_Fade
+export ecm_discrete, costfunction, HPPC_n, data_imp, pres_avg, Capacity_Fade, ecm_fit, soc_loop, incorrect_pres
 
 # --------------- Fitting data import and filtering -----------------------------
 
@@ -318,15 +318,15 @@ function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, Init_SOC)
 	γ = 1
 
     for k in 1:length(uᵢ)-1
-		# for α in 1:n_RC
-		# 	F = exp(-τ[k]/(x[α]*x[(n_RC+α)]))
-		# 	A_RC[α,α] = F
-		# 	B_RC[α] = (1-F)
-		# end
+		for α in 1:n_RC
+			F = exp(-τ[k]/(x[α]*x[(n_RC+α)]))
+			A_RC[α,α] = F
+			B_RC[α] = (1-F)
+		end
 
-		F = exp(-τ[k]/(x[1]*x[2]))
-		A_RC = F
-		B_RC = (1-F)
+		# F = exp(-τ[k]/(x[1]*x[2]))
+		# A_RC = F
+		# B_RC = (1-F)
 
 		if (uᵢ[k+1] != 0)
 			s[k+1] = sign(uᵢ[k+1])
@@ -338,13 +338,11 @@ function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, Init_SOC)
 
         z[k+1] = z[k] - (η*((τ[k+1])/3600) / Q) * uᵢ[k]
 
-		@infiltrate cond = true
-
-		iᵣ[k+1] = (A_RC * iᵣ[k] + B_RC * uᵢ[k])
+		iᵣ[k+1,:] = (A_RC * iᵣ[k,:] + B_RC * uᵢ[k])
 
 		# h[k+1] = Ah[k] * h[k] + (Ah[k] -1) * sign(uᵢ[k])
 
-		v[k] = interp_linear(z[k]) -  x[1] .* iᵣ[k] - (x[end] * uᵢ[k]) 
+		v[k] = interp_linear(z[k]) -  sum(x[1:n_RC] .* iᵣ[k,:]') - (x[end] * uᵢ[k]) 
 
 		# v[k] = interp_linear(z[k]) - sum(x[1:n_RC] .* iᵣ[k,:]') - (x[end] * uᵢ[k]) 
 		# + x[n_RC*2 + 1 + 1] * s[k] + x[n_RC*2 + 1 + 2] * h[k]
@@ -357,7 +355,54 @@ end
 
 function costfunction(x, n_RC, uᵢ, Δ, η, Q, OCV, Init_SOC, data)
 	v = ecm_discrete(x, n_RC, uᵢ, Δ, η, Q, OCV, Init_SOC)
-	return rmsd(v,data[1:end-1,"Voltage(V)"]) 
+	return sqL2dist(v,data[1:end-1,"Voltage(V)"]) 
+end
+
+function ecm_fit(data, Q, ocv, soc, x0)
+    uᵢ = data."Current(A)"
+    Δ = data."Test_Time(s)"
+    η = 0.999
+    costfunction_closed = κ->costfunction(κ, 1, uᵢ, Δ, η, Q, ocv, soc, data)
+    res = optimize(costfunction_closed, x0, iterations = 10000)
+    x = Optim.minimizer(res)
+    v = ecm_discrete(x, 1, data."Current(A)", data."Test_Time(s)", η, Q, ocv, soc)
+    return v, x, res
+end
+
+function soc_loop(data, max_soc, min_soc, Q, ocv, dis_step, char_step, soc_step)
+    print("-------------- \n")
+    vmod = OrderedDict()
+    xmod = DataFrame([[],[],[],[]], ["SOC", "R1", "C1", "R0"])
+    err = DataFrame([[],[]], ["RMSE", "MaxError"])
+    for j in min_soc:0.1:max_soc
+        hppcdata = hppc_fun(data, j*100, soc_step, 1, dis_step, char_step, 1)
+        vtemp, xtemp = ecm_fit(hppcdata, Q, ocv, j, [0.005, 4000, 0.005])
+        push!(xmod, [j, xtemp[1], xtemp[2], xtemp[3]])
+        push!(err, [rmsd(vtemp, hppcdata[:,"Voltage(V)"][1:end-1]), maximum(vtemp.-hppcdata[:,"Voltage(V)"][1:end-1])])
+        vmod[j] = [vtemp, hppcdata[:,"Test_Time(s)"][1:end-1]]
+        # print("RMSE:", rmsd(vtemp, hppcdata[:,"Voltage(V)"][1:end-1]))
+        # print(" Max error:",maximum(vtemp.-hppcdata[:,"Voltage(V)"][1:end-1]),"\n")
+    end
+    return vmod, xmod, err
+end
+
+function incorrect_pres(model_data, exp_data, dis_step, char_step, soc_step)
+    err = Array{Float64}(undef, length(model_data),2)
+    k = 1
+    for i in eachindex(model_data)
+        data = hppc_fun(exp_data, i*100, soc_step, 1, dis_step, char_step, 1)[:,"Voltage(V)"]
+        if length(data) > length(model_data[i][1])
+            err[k,1] = rmsd(model_data[i][1], data[1:end-(length(data)-length(model_data[i][1]))])
+            err[k,2] = maximum(abs.(model_data[i][1] .- data[1:end-(length(data)-length(model_data[i][1]))]))
+        else 
+            err[k,1] = rmsd(model_data[i][1][1:end-(length(model_data[i][1])-length(data))], data)
+            err[k,2] = maximum(abs.(model_data[i][1][1:end-(length(model_data[i][1])-length(data))] .- data))
+        end
+
+        k += 1
+    end
+
+    return err
 end
 
 end
