@@ -3,7 +3,7 @@ module PIECM
 using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, XLSX, Statistics, DataStructures, Optim
 using StatsBase: sqL2dist, rmsd
  
-export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv, sqrzeros, HPPC, hppc_fun
+export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv, sqrzeros, HPPC, hppc_fun, hppc_calc
 export ecm_discrete, costfunction, HPPC_n, data_imp, pres_avg, Capacity_Fade, ecm_fit, soc_loop, incorrect_pres
 
 # --------------- Fitting data import and filtering -----------------------------
@@ -183,24 +183,25 @@ function HPPC(data, soc_increment, cycle, dis_pulse_step, char_pulse_step, dis_s
 	return γ
 end
 
-function hppc_calc(dataframe, i, init_V)
-	df = filter(row -> row."TC_Counter1" == (i-1), dataframe)
+function hppc_calc(df, i, init_V)
+	# df = filter(row -> row."TC_Counter1" == (i), dataframe)
 
-	r = abs((init_V - df[end,"Voltage(V)"]) / abs(mean(df[:,"Current(A)"])))
-	P = df[:,"Voltage(V)"] .* df[:,"Current(A)"]
-	P_min = findmin(abs.(P))[1]
-	P_max = findmax(abs.(P))[1]
-	P_avg = mean(P)
-	I_min = findmin(abs.(df[:,"Current(A)"]))[1]
-	I_max = findmax(abs.(df[:,"Current(A)"]))[1]
+	# r = abs((init_V - df[end,"Voltage(V)"]) / abs(mean(df[:,"Current(A)"])))
+	# P = df[:,"Voltage(V)"] .* df[:,"Current(A)"]
+	# P_min = findmin(abs.(P))[1]
+	# P_max = findmax(abs.(P))[1]
+	# P_avg = mean(P)
+	# I_min = findmin(abs.(df[:,"Current(A)"]))[1]
+	# I_max = findmax(abs.(df[:,"Current(A)"]))[1]
 
-	t = [P_max P_min I_max I_min]
+	# t = [P_max P_min I_max I_min]
 
-	if df[1, "Current(A)"] < 0
-		t .= -t
-	end
+	# if df[1, "Current(A)"] < 0
+	# 	t .= -t
+	# end
 
-	return [r, P_avg, t[1], t[2], t[3], t[4]]
+	# return [r, P_avg, t[1], t[2], t[3], t[4]]
+	return abs((init_V - df[end,"Voltage(V)"]) / abs(mean(df[:,"Current(A)"])))
 end
 
 function Capacity_Fade(df, d_stepinit, d_step)
@@ -296,12 +297,9 @@ function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, Init_SOC)
     A_RC = sqrzeros(n_RC)
     B_RC = zeros(n_RC)
 
-    z = Array{Float64}(undef, length(uᵢ))
-	Ah = Array{Float64}(undef, length(uᵢ))
-	h = Array{Float64}(undef, length(uᵢ))
-	s = Array{Float64}(undef, length(uᵢ))
-    v = Array{Float64}(undef, length(uᵢ))
-    τ = Array{Float64}(undef, length(Δ))
+    z = Array{Float64}(undef, length(uᵢ)) .= 0
+    v = Array{Float64}(undef, length(uᵢ)) .= 0
+    τ = Array{Float64}(undef, length(Δ)) .= 0	
 
 	uᵢ = -uᵢ # Changes charge / discharge convention to match Plett ISBN:978-1-63081-023-8
 
@@ -328,24 +326,21 @@ function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, Init_SOC)
 		# A_RC = F
 		# B_RC = (1-F)
 
-		if (uᵢ[k+1] != 0)
-			s[k+1] = sign(uᵢ[k+1])
-		else
-			s[k] = s[k]
-		end
 
-		# Ah[k] = exp(-abs(η * uᵢ[k] * γ * τ[k]) / Q)
 
         z[k+1] = z[k] - (η*((τ[k+1])/3600) / Q) * uᵢ[k]
 
+
+
 		iᵣ[k+1,:] = (A_RC * iᵣ[k,:] + B_RC * uᵢ[k])
 
-		# h[k+1] = Ah[k] * h[k] + (Ah[k] -1) * sign(uᵢ[k])
+		# iᵣ[k+1] = (A_RC * iᵣ[k] + B_RC * uᵢ[k])
 
-		v[k] = interp_linear(z[k]) -  sum(x[1:n_RC] .* iᵣ[k,:]') - (x[end] * uᵢ[k]) 
 
-		# v[k] = interp_linear(z[k]) - sum(x[1:n_RC] .* iᵣ[k,:]') - (x[end] * uᵢ[k]) 
-		# + x[n_RC*2 + 1 + 1] * s[k] + x[n_RC*2 + 1 + 2] * h[k]
+		v[k] = interp_linear(z[k]) -  sum(x[1:n_RC] .* iᵣ[k,n_RC]') - (x[end] * uᵢ[k]) 
+		# v[k] = interp_linear(z[k]) -  x[1] .* iᵣ[k] - (x[end] * uᵢ[k]) 
+
+
     end
 
     return v[1:end-1]
