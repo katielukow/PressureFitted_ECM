@@ -1,9 +1,9 @@
 module PIECM
 
-using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, XLSX, Statistics, DataStructures, Optim
+using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, XLSX, Statistics, DataStructures, Optim, PlotlyJS
 using StatsBase: sqL2dist, rmsd
  
-export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv, sqrzeros, HPPC, hppc_fun, hppc_calc
+export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv, sqrzeros, HPPC, hppc_fun, hppc_calc, ecm_err_range,rmins, pres_contour
 export ecm_discrete, costfunction, HPPC_n, data_imp, pres_avg, Capacity_Fade, ecm_fit, soc_loop, incorrect_pres
 
 # --------------- Fitting data import and filtering -----------------------------
@@ -114,7 +114,7 @@ function hppc_pulse(data, soc, soc_increment, pulse_rate, dis_pulse_step, char_p
 	# df = filter(row -> row."Step_Index" == dis_pulse_step || row."Step_Index" == char_pulse_step || row."Step_Index" == (char_pulse_step-1)|| row."Step_Index" == (char_pulse_step+1) || row."Step_Index" == (dis_pulse_step-1), df)
 	
 	d = filter(row -> row."Step_Index" == dis_pulse_step || row."Step_Index" == char_pulse_step || row."Step_Index" == (char_pulse_step-1)|| row."Step_Index" == (char_pulse_step+1) || row."Step_Index" == (dis_pulse_step-1), df)
-	return d[5:end,:]
+	return d[4:end,:]
 end
 
 function hppc_pulse(data, soc::Vector, soc_increment, pulse_rate, dis_pulse_step, char_pulse_step)
@@ -201,7 +201,8 @@ function hppc_calc(df, i, init_V)
 	# end
 
 	# return [r, P_avg, t[1], t[2], t[3], t[4]]
-	return abs((init_V - df[end,"Voltage(V)"]) / abs(mean(df[:,"Current(A)"])))
+	Ineg = filter(row -> row."Current(A)" < 0, df)
+	return abs((init_V - minimum(df[:,"Voltage(V)"])) / abs(mean(Ineg[:,"Current(A)"])))
 end
 
 function Capacity_Fade(df, d_stepinit, d_step)
@@ -368,12 +369,12 @@ function soc_loop(data, max_soc, min_soc, Q, ocv, dis_step, char_step, soc_step)
     print("-------------- \n")
     vmod = OrderedDict()
     xmod = DataFrame([[],[],[],[]], ["SOC", "R1", "C1", "R0"])
-    err = DataFrame([[],[]], ["RMSE", "MaxError"])
+    err = DataFrame([[],[],[]], ["RMSE", "MaxError", "L2dist"])
     for j in min_soc:0.1:max_soc
         hppcdata = hppc_fun(data, j*100, soc_step, 1, dis_step, char_step, 1)
-        vtemp, xtemp = ecm_fit(hppcdata, Q, ocv, j, [0.005, 4000, 0.005])
+        vtemp, xtemp = ecm_fit(hppcdata, Q, ocv, j, [0.005, 2000, 0.010])
         push!(xmod, [j, xtemp[1], xtemp[2], xtemp[3]])
-        push!(err, [rmsd(vtemp, hppcdata[:,"Voltage(V)"][1:end-1]), maximum(vtemp.-hppcdata[:,"Voltage(V)"][1:end-1])])
+        push!(err, [rmsd(vtemp, hppcdata[:,"Voltage(V)"][1:end-1]), maximum(vtemp.-hppcdata[:,"Voltage(V)"][1:end-1]), sqL2dist(vtemp, hppcdata[:,"Voltage(V)"][1:end-1])])
         vmod[j] = [vtemp, hppcdata[:,"Test_Time(s)"][1:end-1]]
         # print("RMSE:", rmsd(vtemp, hppcdata[:,"Voltage(V)"][1:end-1]))
         # print(" Max error:",maximum(vtemp.-hppcdata[:,"Voltage(V)"][1:end-1]),"\n")
@@ -399,5 +400,70 @@ function incorrect_pres(model_data, exp_data, dis_step, char_step, soc_step)
 
     return err
 end
+
+function ecm_err_range(data, Q, ocv, soc, soc_increment, dstep, C1_range, R1_range)
+
+    df = hppc_fun(data, soc*100, soc_increment, 1, dstep, dstep+2, 1)
+    r0_init = hppc_calc(df, round(((100 - soc*100) / soc_increment)), df[:,"Voltage(V)"][1])
+
+	xrng = R1_range[1]:R1_range[2]:R1_range[3]
+    yrng = C1_range[1]:C1_range[2]:C1_range[3]
+	zrng = r0_init-0.01:0.001:r0_init+0.01
+
+    errors = OrderedDict{Float64, Matrix{Float64}}()
+
+    current = df."Current(A)"
+    test_time = df."Test_Time(s)"
+    voltage_end = df."Voltage(V)"[1:end-1]
+    
+    err_matrix = zeros(length(xrng) + 1, length(yrng) + 1)
+    err_matrix[1, 2:end] .= yrng
+    err_matrix[2:end, 1] .= xrng
+
+    
+    # print(r0, "\n")
+    # for k in r0 * 0.5:0.0005:r0*1.5
+    for (k,r0) in enumerate(zrng)
+        for (i,r1) in enumerate(xrng)
+            for (j,c1) in enumerate(yrng)
+                v_model = ecm_discrete([r1, c1, r0], 1, current, test_time, 0.999, Q, ocv, soc)
+                err = sqL2dist(v_model, voltage_end)
+                err_matrix[i+1, j+1] = err
+            end
+        end
+        
+        errors[round(r0, digits = 6)] = copy(err_matrix)
+    end
+
+    return errors
+end
+
+function rmins(data)
+    r = DataFrame([[],[],[],[],[],[]], ["Error", "R0", "R1", "C1", "i", "j"])
+    j = 1
+    
+    for i in eachindex(data)
+        mincart = argmin(data[i][2:end, 2:end])
+        push!(r,[round(minimum(data[i][2:end,2:end]), digits = 3),
+					 round(i,digits=6), 
+					 data[i][mincart[1]+1, 1], 
+					 data[i][1, mincart[2]+1], 
+					 mincart[1], 
+					 mincart[2]])
+        j += 1
+    end
+	
+    return sort!(r, :Error)
+end
+
+function pres_contour(dict, min, title)
+	t1 = contour(z=dict[min[1,:R0]][2:end, 2:end], x=dict[min[1,:R0]][1, 2:end], y=dict[min[1,:R0]][2:end,1], contours_start = 0, contours_end = 0.5, contours_size = 0.025, colorbar_title="Error", showscale=true)
+	t2 = scatter(x=[min[1,:C1]],y=[min[1,:R1]], mode="markers", showlegend = false)
+	layout1 = Layout(title=title)
+	
+	return plot([t1,t2], layout1)
+
+end
+
 
 end

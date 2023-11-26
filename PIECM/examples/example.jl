@@ -1,4 +1,4 @@
-using PIECM, Optim, Statistics, PGFPlotsX, LaTeXStrings, StatsBase, BenchmarkTools, DataStructures, DataFrames, Infiltrator
+using PIECM, Optim, Statistics, PGFPlotsX, LaTeXStrings, StatsBase, BenchmarkTools, DataStructures, DataFrames, Infiltrator, Colors
 
 BenchmarkTools.DEFAULT_PARAMETERS.seconds = 60
 # plotly()
@@ -22,31 +22,31 @@ mbpf50kpa.Date_Time .= replace.(mbpf50kpa.Date_Time, "\t" => "")
 mbpf100kpa.Date_Time .= replace.(mbpf100kpa.Date_Time, "\t" => "")
 
 soc = 0.9
-mbpf25kpa_1 = hppc_fun(mbpf25kpa, soc*100, 10, 1, 17, 19, 1)
-mbpf40kpa_1 = hppc_fun(mbpf40kpa, soc*100, 10, 1, 20, 22, 1)
-mbpf130kpa_1 = hppc_fun(mbpf130kpa, soc*100, 10, 1, 20, 22, 1)
+mbpf25kpa_1 = hppc_fun(mbpf25kpa, soc*100, 10, 1, 17, 19, 1);
+mbpf40kpa_1 = hppc_fun(mbpf40kpa, soc*100, 10, 1, 20, 22, 1);
+mbpf130kpa_1 = hppc_fun(mbpf130kpa, soc*100, 10, 1, 20, 22, 1);
 
-mbpf0kpa_1 = hppc_fun(P0kpa, soc*100, 5, 1, 19, 21, 1)
-mbpf50kpa_1 = hppc_fun(mbpf50kpa, soc*100, 5, 1, 19, 21, 1)
-mbpf100kpa_1 = hppc_fun(mbpf100kpa, soc*100, 5, 1, 19, 21, 1)
+mbpf0kpa_1 = hppc_fun(P0kpa, soc*100, 5, 1, 19, 21, 1);
+mbpf50kpa_1 = hppc_fun(mbpf50kpa, soc*100, 5, 1, 19, 21, 1);
+mbpf100kpa_1 = hppc_fun(mbpf100kpa, soc*100, 5, 1, 19, 21, 1);
 
 # Dictionary of data
 mod1_dic = Dict(    
     "mbpf25kpa" => mbpf25kpa,
     "mbpf40kpa" => mbpf40kpa,
     "mbpf130kpa" => mbpf130kpa,
-)
+);
 
 mod2_dic = Dict(
     "mbpf0kpa" => P0kpa,
     "mbpf50kpa" => mbpf50kpa,
     "mbpf100kpa" => mbpf100kpa,
-)
+);
 
 
 
 v25,x25, err25 = soc_loop(mbpf25kpa, 1.0, 0.1, 3.7, ocv1, 17, 19, 10);
-# v40,x40, err40 = soc_loop(mbpf40kpa, 1.0, 0.1, 3.7, ocv1, 20, 22, 10);
+v40,x40, err40 = soc_loop(mbpf40kpa, 1.0, 0.1, 3.7, ocv1, 20, 22, 10);
 # v130,x130, err130 = soc_loop(mbpf130kpa, 1.0, 0.1, 3.7, ocv1, 20, 22, 10);
 # v0,x0, err0 = soc_loop(P0kpa, 1.0, 0.1, 5.5, ocv2, 19, 21, 5);
 # v50,x50, err50 = soc_loop(mbpf50kpa, 1.0, 0.1, 5.5, ocv2, 19, 21, 5);
