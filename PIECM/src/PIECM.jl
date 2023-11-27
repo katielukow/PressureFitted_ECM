@@ -4,7 +4,7 @@ using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, XLSX, Statistic
 using StatsBase: sqL2dist, rmsd
  
 export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv, sqrzeros, HPPC, hppc_fun, hppc_calc, ecm_err_range,rmins, pres_contour
-export ecm_discrete, costfunction, HPPC_n, data_imp, pres_avg, Capacity_Fade, ecm_fit, soc_loop, incorrect_pres
+export ecm_discrete, costfunction, HPPC_n, data_imp, pres_avg, Capacity_Fade, ecm_fit, soc_loop, incorrect_pres, soc_range
 
 # --------------- Fitting data import and filtering -----------------------------
 
@@ -329,7 +329,7 @@ function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, Init_SOC)
 
 
 
-        z[k+1] = z[k] - (η*((τ[k+1])/3600) / Q) * uᵢ[k]
+        z[k+1] = z[k] - (η*((τ[k])/3600) / Q) * uᵢ[k]
 
 
 
@@ -463,6 +463,22 @@ function pres_contour(dict, min, title)
 	
 	return plot([t1,t2], layout1)
 
+end
+
+function soc_range(df, Q, ocv, soc_increment, d_step, r1_range, c1_range, soc_range)
+
+	srng = soc_range[1]:soc_range[2]:soc_range[3]
+	Z = OrderedDict()
+    print("-------------- \n")
+    err = DataFrame([[], [],[],[], []], [:SOC, :R0, :R1, :C1, :err])
+    for i in srng
+		print(i, "\n")
+        z = ecm_err_range(df, Q, ocv, i, soc_increment, d_step, r1_range, c1_range);
+        min = rmins(z)
+        push!(err, [i min[1, :R0] min[1, :R1] min[1, :C1] min[1, :Error]])
+		Z[i] = z
+    end
+    return err, Z
 end
 
 
