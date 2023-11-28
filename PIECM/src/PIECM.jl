@@ -337,8 +337,7 @@ function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, Init_SOC)
 
 		# iᵣ[k+1] = (A_RC * iᵣ[k] + B_RC * uᵢ[k])
 
-
-		v[k] = interp_linear(z[k]) -  sum(x[1:n_RC] .* iᵣ[k,n_RC]') - (x[end] * uᵢ[k]) 
+		v[k] = interp_linear(z[k]) -  sum(x[1:n_RC] .* iᵣ[k,:]') - (x[end] * uᵢ[k]) 
 		# v[k] = interp_linear(z[k]) -  x[1] .* iᵣ[k] - (x[end] * uᵢ[k]) 
 
 
@@ -358,10 +357,10 @@ function ecm_fit(data, Q, ocv, soc, x0)
     uᵢ = data."Current(A)"
     Δ = data."Test_Time(s)"
     η = 0.999
-    costfunction_closed = κ->costfunction(κ, 1, uᵢ, Δ, η, Q, ocv, soc, data)
+    costfunction_closed = κ->costfunction(κ, 2, uᵢ, Δ, η, Q, ocv, soc, data)
     res = optimize(costfunction_closed, x0, iterations = 10000)
     x = Optim.minimizer(res)
-    v = ecm_discrete(x, 1, data."Current(A)", data."Test_Time(s)", η, Q, ocv, soc)
+    v = ecm_discrete(x, 2, data."Current(A)", data."Test_Time(s)", η, Q, ocv, soc)
     return v, x, res
 end
 
@@ -401,42 +400,7 @@ function incorrect_pres(model_data, exp_data, dis_step, char_step, soc_step)
     return err
 end
 
-function ecm_err_range(data, Q, ocv, soc, soc_increment, dstep, C1_range, R1_range)
 
-    df = hppc_fun(data, soc*100, soc_increment, 1, dstep, dstep+2, 1)
-    r0_init = hppc_calc(df, round(((100 - soc*100) / soc_increment)), df[:,"Voltage(V)"][1])
-
-	xrng = R1_range[1]:R1_range[2]:R1_range[3]
-    yrng = C1_range[1]:C1_range[2]:C1_range[3]
-	zrng = r0_init-0.01:0.001:r0_init+0.01
-
-    errors = OrderedDict{Float64, Matrix{Float64}}()
-
-    current = df."Current(A)"
-    test_time = df."Test_Time(s)"
-    voltage_end = df."Voltage(V)"[1:end-1]
-    
-    err_matrix = zeros(length(xrng) + 1, length(yrng) + 1)
-    err_matrix[1, 2:end] .= yrng
-    err_matrix[2:end, 1] .= xrng
-
-    
-    # print(r0, "\n")
-    # for k in r0 * 0.5:0.0005:r0*1.5
-    for (k,r0) in enumerate(zrng)
-        for (i,r1) in enumerate(xrng)
-            for (j,c1) in enumerate(yrng)
-                v_model = ecm_discrete([r1, c1, r0], 1, current, test_time, 0.999, Q, ocv, soc)
-                err = sqL2dist(v_model, voltage_end)
-                err_matrix[i+1, j+1] = err
-            end
-        end
-        
-        errors[round(r0, digits = 6)] = copy(err_matrix)
-    end
-
-    return errors
-end
 
 function rmins(data)
     r = DataFrame([[],[],[],[],[],[]], ["Error", "R0", "R1", "C1", "i", "j"])

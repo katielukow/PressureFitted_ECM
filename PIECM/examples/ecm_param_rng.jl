@@ -61,13 +61,8 @@ v0 = ecm_discrete([err0[5, :R1], err0[5, :C1], err0[5, :R0]], 1, d0."Current(A)"
 
 
 
-# Set up other SOC points - maybe 10 50 90
-# add +/- on R0 or fit R0 too
-
 # Single RC vs 2 RC comparison
 
 # contour plot at 90% SOC for three r0 values of the lowest error for model (1), single pressure
 
 # contour plot at 20% SOC for three r0 values of the lowest error for model (1), single pressure
-
-# scatter plot of error vs r0 for model (1) at 20% SOC and 90% SOC for all pressures, both models (1) and (2)
