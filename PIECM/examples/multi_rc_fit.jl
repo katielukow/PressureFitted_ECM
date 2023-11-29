@@ -49,12 +49,12 @@ mbpf25kpa = data_import_csv("data/HPPC/230320_MBPF_Investigation_25kpa_11_0043_C
 mbpf40kpa = data_import_csv("data/HPPC/230320_MBPF_Investigation_40kpa_11_0048_Channel_6_Wb_1.CSV", "old")
 ocv1 = pocv("data/OCV/220310_BTC_POCV_GITT_Mel_SLPB7336128HV_1_25C_Channel_5_Wb_1.CSV", 5, 8, 1000)
 
-P0kpa = data_import_csv("data/HPPC/230606_MBPF_PCharact_Mel_SLPBA442124_0kpa_25C_Channel_3_Wb_1.csv", "new")
-mbpf50kpa = data_import_csv("data/HPPC/230606_MBPF_PCharact_Mel_SLPBA442124_50kpa_25C_Channel_4_Wb_1.csv", "new")
-mbpf100kpa = data_import_csv("data/HPPC/230606_MBPF_PCharact_Mel_SLPBA442124_100kpa_25C_Channel_7_Wb_1.csv", "new")
-ocv2 = pocv("data/OCV/230621_MBPF_PCharact_POCV_Mel_SLPBA442124_0kpa_25C_Channel_3_Wb_1.csv", 11, 13, 1000)
+P0kpa = data_import_csv("data/HPPC/230606_MBPF_PCharact_Mel_SLPBA442124_0kpa_25C_Channel_3_Wb_1.CSV", "new")
+mbpf50kpa = data_import_csv("data/HPPC/230606_MBPF_PCharact_Mel_SLPBA442124_50kpa_25C_Channel_4_Wb_1.CSV", "new")
+mbpf100kpa = data_import_csv("data/HPPC/230606_MBPF_PCharact_Mel_SLPBA442124_100kpa_25C_Channel_7_Wb_1.CSV", "new")
+ocv2 = pocv("data/OCV/230621_MBPF_PCharact_POCV_Mel_SLPBA442124_0kpa_25C_Channel_3_Wb_1.CSV", 11, 13, 1000)
 
-df40 = ecm_err_range_2RC(mbpf40kpa, 3.7, ocv1, 1, 10, 20, LinRange(10000,30000,6), LinRange(0.00001, .010001, 6))
+df40 = ecm_err_range_2RC(mbpf40kpa, 3.7, ocv1, 1, 10, 20, LinRange(10000,30000,81), LinRange(0.00001, .010001, 11))
 min40 = sort!(df40, :Err)
 println(min40[1:10, :])
 
@@ -62,7 +62,9 @@ println(min40[1:10, :])
 # mins40 = df40[min_err40, :]
 # mins40 = DataFrame([[],[],[],[],[],[]], [:Err, :R0, :R1, :R2, :C1, :C2])
 
-# df50 = ecm_err_range_2RC(mbpf40kpa, 3.7, ocv1, 1, 10, 20, LinRange(10000,30000,101), LinRange(0.00001, .010001, 11))
+df50 = ecm_err_range_2RC(mbpf50kpa, 5.5, ocv2, 1, 5, 19, LinRange(10000,30000,81), LinRange(0.00001, .010001, 11))
+min50 = sort!(df50, :Err)
+println(min50[1:10,:]
 # mins50 = DataFrame([[],[],[],[],[],[]], [:Err, :R0, :R1, :R2, :C1, :C2])
 
 # for i in eachindex(err40)
@@ -79,5 +81,5 @@ println(min40[1:10, :])
 #     push!(mins50, [temp[:Err], i, temp[:R1], temp[:R2], temp[:C1], temp[:C2]])
 # end
 
-# jldsave("err40_2RC.jld2", data=df40)
-# jldsave("err50_2RC.jld2", data=df50)
+jldsave("err40_2RC.jld2", data=df40)
+jldsave("err50_2RC.jld2", data=df50)
