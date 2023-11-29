@@ -31,8 +31,10 @@ dc_100 = filter(row -> row."Step_Index" == 12, mbpf100kpa)
 soc = 1.0
 d40 = ecm_discrete([err40[end, :R1], err40[end, :C1], err40[end, :R0]], 1, dc_40."Current(A)", dc_40."Test_Time(s)", 0.999, 3.7, ocv1, soc)
 d130 = ecm_discrete([err130[end, :R1], err130[end, :C1], err130[end, :R0]], 1, dc_130."Current(A)", dc_130."Test_Time(s)", 0.999, 3.7, ocv1, soc)
+d40_2RC = ecm_discrete([0.0010091,0.0030073,12000,30000,0.010914], 2, dc_40."Current(A)", dc_40."Test_Time(s)", 0.999, 3.7, ocv1, soc)
 
 trace1 = scatter(x = dc_40."Test_Time(s)", y = dc_40."Voltage(V)", mode="lines")
 trace2 = scatter(x = dc_40[1:end-1,"Test_Time(s)"], y = d40, mode="lines")
 trace3 = scatter(x = dc_130."Test_Time(s)", y = dc_130."Voltage(V)", mode="lines")
-plot([trace1,trace2, trace3])
+trace4 = scatter(x = dc_40[1:end-1,"Test_Time(s)"], y = d40_2RC, mode="lines")
+plot([trace1,trace2, trace3, trace4])

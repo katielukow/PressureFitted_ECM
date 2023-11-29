@@ -328,7 +328,6 @@ function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, Init_SOC)
 		# B_RC = (1-F)
 
 
-
         z[k+1] = z[k] - (η*((τ[k])/3600) / Q) * uᵢ[k]
 
 
