@@ -4,7 +4,7 @@ using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, XLSX, Statistic
 using StatsBase: sqL2dist, rmsd
  
 export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv, sqrzeros, HPPC, hppc_fun, hppc_calc, ecm_err_range,rmins, pres_contour
-export ecm_discrete, costfunction, HPPC_n, data_imp, pres_avg, Capacity_Fade, ecm_fit, soc_loop, incorrect_pres, soc_range
+export ecm_discrete, costfunction, HPPC_n, data_imp, pres_avg, Capacity_Fade, ecm_fit, soc_loop, incorrect_pres, soc_range, soc_range_2RC, ecm_err_range_2RC
 
 # --------------- Fitting data import and filtering -----------------------------
 
@@ -399,7 +399,36 @@ function incorrect_pres(model_data, exp_data, dis_step, char_step, soc_step)
     return err
 end
 
-
+function ecm_err_range(data, Q, ocv, soc, soc_increment, dstep, C1_range, R1_range)
+    df = hppc_fun(data, soc*100, soc_increment, 1, dstep, dstep+2, 1)
+    r0_init = hppc_calc(df, round(((100 - soc*100) / soc_increment)), df[:,"Voltage(V)"][1])
+	xrng = R1_range[1]:R1_range[2]:R1_range[3]
+    yrng = C1_range[1]:C1_range[2]:C1_range[3]
+	zrng = r0_init-0.01:0.001:r0_init+0.01
+    errors = OrderedDict{Float64, Matrix{Float64}}()
+    current = df."Current(A)"
+    test_time = df."Test_Time(s)"
+    voltage_end = df."Voltage(V)"[1:end-1]
+    
+    err_matrix = zeros(length(xrng) + 1, length(yrng) + 1)
+    err_matrix[1, 2:end] .= yrng
+    err_matrix[2:end, 1] .= xrng
+    
+    # print(r0, "\n")
+    # for k in r0 * 0.5:0.0005:r0*1.5
+    for (k,r0) in enumerate(zrng)
+        for (i,r1) in enumerate(xrng)
+            for (j,c1) in enumerate(yrng)
+                v_model = ecm_discrete([r1, c1, r0], 1, current, test_time, 0.999, Q, ocv, soc)
+                err = sqL2dist(v_model, voltage_end)
+                err_matrix[i+1, j+1] = err
+            end
+        end
+        
+        errors[round(r0, digits = 6)] = copy(err_matrix)
+    end
+    return errors
+end
 
 function rmins(data)
     r = DataFrame([[],[],[],[],[],[]], ["Error", "R0", "R1", "C1", "i", "j"])
@@ -444,5 +473,65 @@ function soc_range(df, Q, ocv, soc_increment, d_step, r1_range, c1_range, soc_ra
     return err, Z
 end
 
+function soc_range_2RC(df, Q, ocv, soc_increment, d_step, C_range, R_range, soc_range)
+	srng = soc_range[1]:soc_range[2]:soc_range[3]
+	# Z = OrderedDict()
+	print("-------------- \n")
+	err = DataFrame([[], [],[],[], [], [], []], [:SOC, :R0, :R1, :R2, :C1, :C2, :err])
+	for i in srng
+		print(i, "\n")
+		z = ecm_err_range_2RC(df, Q, ocv, i, soc_increment, d_step, C_range, R_range);
+		# min = rmins(z)
+		min = sort!(z, :Err)
+		push!(err, [i min[1, :R0] min[1, :R1] min[1, :R2] min[1, :C1] min[1, :C2] min[1, :Err]])
+		# Z[i] = z
+	end
+	return err
+end
+
+
+function ecm_err_range_2RC(data, Q, ocv, soc, soc_increment, dstep, C_range, R_range)
+
+    df = hppc_fun(data, soc*100, soc_increment, 1, dstep, dstep+2, 1)
+    r0_init = hppc_calc(df, round(((100 - soc*100) / soc_increment)), df[:,"Voltage(V)"][1])
+	zrng = r0_init-0.005:0.001:r0_init+0.002
+    zrng_array = collect(enumerate(zrng))  # Convert to array for threading
+
+
+    current = df."Current(A)"
+    test_time = df."Test_Time(s)"
+    voltage_end = df."Voltage(V)"[1:end-1]
+
+    results = DataFrame(R0 = Float64[], R1 = Float64[], R2 = Float64[], C1 = Float64[], C2 = Float64[], Err = Float64[])
+    # resize!(results, length(R_range) * length(C_range) * length(R_range) * length(C_range) * length(zrng_array))
+
+    z = 1
+    for (k,r0) in zrng_array
+        # print(k, "\n")
+        for i in eachindex(R_range)
+            for j in eachindex(R_range)
+                for m in eachindex(C_range)
+                    for n in eachindex(C_range)
+                        r1 = R_range[i]
+                        r2 = R_range[j]
+                        c1 = C_range[m]
+                        c2 = C_range[n]
+
+                        v_model = ecm_discrete([r1,r2, c1,c2, r0], 2, current, test_time, 0.999, Q, ocv, soc)
+                        err = sqL2dist(v_model, voltage_end)
+                        push!(results, [r0, r1, r2, c1, c2, err])
+                        # results[z, :] = [r0, r1, r2, c1, c2, err]
+                        z+=1
+                    end
+                end
+            end
+        end
+        # append!(results, local_results)
+        # errors[round(r0, digits = 6)] = df
+        # errors[round(r0, digits = 6)] = copy(err_matrix)
+    end
+
+    return results
+end
 
 end
