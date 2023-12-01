@@ -21,7 +21,7 @@ P0kpa.Date_Time .= replace.(P0kpa.Date_Time, "\t" => "")
 mbpf50kpa.Date_Time .= replace.(mbpf50kpa.Date_Time, "\t" => "")
 mbpf100kpa.Date_Time .= replace.(mbpf100kpa.Date_Time, "\t" => "")
 
-soc = 0.9
+soc = 0.2
 mbpf25kpa_1 = hppc_fun(mbpf25kpa, soc*100, 10, 1, 17, 19, 1);
 mbpf40kpa_1 = hppc_fun(mbpf40kpa, soc*100, 10, 1, 20, 22, 1);
 mbpf130kpa_1 = hppc_fun(mbpf130kpa, soc*100, 10, 1, 20, 22, 1);
@@ -30,34 +30,39 @@ mbpf0kpa_1 = hppc_fun(P0kpa, soc*100, 5, 1, 19, 21, 1);
 mbpf50kpa_1 = hppc_fun(mbpf50kpa, soc*100, 5, 1, 19, 21, 1);
 mbpf100kpa_1 = hppc_fun(mbpf100kpa, soc*100, 5, 1, 19, 21, 1);
 
-# Dictionary of data
-mod1_dic = Dict(    
-    "mbpf25kpa" => mbpf25kpa,
-    "mbpf40kpa" => mbpf40kpa,
-    "mbpf130kpa" => mbpf130kpa,
-);
+data, max_soc, min_soc, Q, ocv, dis_step, char_step, soc_step
+v40, x40, error_40 = soc_loop(mbpf40kpa_1, 0.5, 0.5, 3.7, ocv1, 20, 22, 10)
 
-mod2_dic = Dict(
-    "mbpf0kpa" => P0kpa,
-    "mbpf50kpa" => mbpf50kpa,
-    "mbpf100kpa" => mbpf100kpa,
-);
+# # Dictionary of data
+# mod1_dic = Dict(    
+#     "mbpf25kpa" => mbpf25kpa,
+#     "mbpf40kpa" => mbpf40kpa,
+#     "mbpf130kpa" => mbpf130kpa,
+# );
+
+# mod2_dic = Dict(
+#     "mbpf0kpa" => P0kpa,
+#     "mbpf50kpa" => mbpf50kpa,
+#     "mbpf100kpa" => mbpf100kpa,
+# );
+# err25 = jldopen("err25.jld2")["data"]
+# err40 = jldopen("err40.jld2")["data"]
+# err130 = jldopen("err130.jld2")["data"]
+
+# err0 = jldopen("err0.jld2")["data"]
+# err50 = jldopen("err50.jld2")["data"]
+# err100 = jldopen("err100.jld2")["data"]
 
 
+v25 = ecm_discrete([err25[Int(soc*10), :R1], err25[Int(soc*10), :C1], err25[Int(soc*10), :R0]], 1, mbpf25kpa_1[2:end, "Current(A)"], mbpf25kpa_1[2:end,"Test_Time(s)"], 
+0.999, 3.7, ocv1, soc)
+v40 = ecm_discrete([err40[Int(soc*10), :R1], err40[Int(soc*10), :C1], err40[Int(soc*10), :R0]], 1, mbpf40kpa_1[2:end, "Current(A)"], mbpf40kpa_1[2:end,"Test_Time(s)"], 0.999, 3.7, ocv1, soc)
+v130 = ecm_discrete([err130[Int(soc*10), :R1], err130[Int(soc*10), :C1], err130[Int(soc*10), :R0]], 1, mbpf130kpa_1[2:end, "Current(A)"], mbpf130kpa_1[2:end,"Test_Time(s)"], 0.999, 3.7, ocv1, soc)
+v130_2 = ecm_discrete([err130[Int(soc*10), :R1], err130[Int(soc*10), :C1]-2000, err130[Int(soc*10), :R0]], 1, mbpf130kpa_1[2:end, "Current(A)"], mbpf130kpa_1[2:end,"Test_Time(s)"], 0.999, 3.7, ocv1, soc)
 
-v25,x25, err25 = soc_loop(mbpf25kpa, 0.5, 0.5, 3.7, ocv1, 17, 19, 10);
-v40,x40, err40 = soc_loop(mbpf40kpa, 1.0, 0.1, 3.7, ocv1, 20, 22, 10);
-# v130,x130, err130 = soc_loop(mbpf130kpa, 1.0, 0.1, 3.7, ocv1, 20, 22, 10);
-# v0,x0, err0 = soc_loop(P0kpa, 1.0, 0.1, 5.5, ocv2, 19, 21, 5);
-# v50,x50, err50 = soc_loop(mbpf50kpa, 1.0, 0.1, 5.5, ocv2, 19, 21, 5);
-# v100,x100, err100 = soc_loop(mbpf100kpa, 1.0, 0.1, 5.5, ocv2, 19, 21, 5);
-
-
-# err25_40 = incorrect_pres(v25, mbpf40kpa, 20, 22, 10)
-# err25_130 = incorrect_pres(v25, mbpf130kpa, 20, 22, 10)
-# err0_50 = incorrect_pres(v0, mbpf50kpa, 19, 21, 5)
-# err0_100 = incorrect_pres(v0, mbpf100kpa, 19, 21, 5)
-
+v0 = ecm_discrete([err0[Int(soc*10), :R1], err0[Int(soc*10), :C1], err0[Int(soc*10), :R0]], 1, mbpf0kpa_1[2:end, "Current(A)"], mbpf0kpa_1[2:end,"Test_Time(s)"], 0.999, 5.5, ocv2, soc)
+v50 = ecm_discrete([err50[Int(soc*10), :R1], err50[Int(soc*10), :C1], err50[Int(soc*10), :R0]], 1, mbpf50kpa_1[2:end, "Current(A)"], mbpf50kpa_1[2:end,"Test_Time(s)"], 0.999, 5.5, ocv2, soc)
+v100 = ecm_discrete([err100[Int(soc*10), :R1], err100[Int(soc*10), :C1], err100[Int(soc*10), :R0]], 1, mbpf100kpa_1[2:end, "Current(A)"], mbpf100kpa_1[2:end,"Test_Time(s)"], 0.999, 5.5, ocv2, soc)
 
 
 
@@ -224,143 +229,167 @@ v40,x40, err40 = soc_loop(mbpf40kpa, 1.0, 0.1, 3.7, ocv1, 20, 22, 10);
 # )
 # pgfsave("figures/errpot.pdf", err_plot, include_preamble = false)
 
-RCR0_plot = @pgf GroupPlot(
+# RCR0_plot = @pgf GroupPlot(
 
-    {
-        group_style =
-        {
-            group_size = "3 by 2",
-            xticklabels_at="edge bottom",
-            # yticklabels_at="edge left",
-            horizontal_sep = "2cm",
-            vertical_sep = "1cm"
-        },
-        height = "10cm", width = "15cm",
-        legend_pos= "north east"
+#     {
+#         group_style =
+#         {
+#             group_size = "3 by 2",
+#             xticklabels_at="edge bottom",
+#             # yticklabels_at="edge left",
+#             horizontal_sep = "2cm",
+#             vertical_sep = "1cm"
+#         },
+#         height = "10cm", width = "15cm",
+#         legend_pos= "north east"
 
 
-    },
+#     },
 
-    {
-        # xlabel="State-of-Charge ["*L"\%"*"]",
-        ylabel="Parameter R0",
-        # xmin = -0.1, 
-        # xmax = 65,
-        # ymax = 15,
-        # ymin = 0,
-        ytick = 0.005:0.002:0.016,
-        # xtick = 0:10:100,
-    },
+#     {
+#         # xlabel="State-of-Charge ["*L"\%"*"]",
+#         ylabel="Parameter R0",
+#         # xmin = -0.1, 
+#         # xmax = 65,
+#         # ymax = 15,
+#         # ymin = 0,
+#         ytick = 0.005:0.002:0.016,
+#         # xtick = 0:10:100,
+#     },
 
-    PGFPlotsX.Plot({color = Ϟ[5], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x40[:,"SOC"].*100, y = x40[:,"R0"])),
-    LegendEntry("40 kPa"),
-    PGFPlotsX.Plot({color = Ϟ[6], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x25[:,"SOC"].*100, y = x25[:,"R0"])),
-    LegendEntry("130 kPa"),
-    PGFPlotsX.Plot({color = Ϟ[7], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x130[:,"SOC"].*100, y = x130[:,"R0"])),
-    LegendEntry("200 kPa"),
-    {
-        # xlabel="State-of-Charge ["*L"\%"*"]",
-        ylabel="Parameter R1",
-        # xmin = -0.1, 
-        # xmax = 65,
-        # ymax = 15,
-        # ymin = 0,
-        # xtick = 0:10:100,
-    },
+#     PGFPlotsX.Plot({color = Ϟ[5], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x40[:,"SOC"].*100, y = x40[:,"R0"])),
+#     LegendEntry("40 kPa"),
+#     PGFPlotsX.Plot({color = Ϟ[6], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x25[:,"SOC"].*100, y = x25[:,"R0"])),
+#     LegendEntry("130 kPa"),
+#     PGFPlotsX.Plot({color = Ϟ[7], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x130[:,"SOC"].*100, y = x130[:,"R0"])),
+#     LegendEntry("200 kPa"),
+#     {
+#         # xlabel="State-of-Charge ["*L"\%"*"]",
+#         ylabel="Parameter R1",
+#         # xmin = -0.1, 
+#         # xmax = 65,
+#         # ymax = 15,
+#         # ymin = 0,
+#         # xtick = 0:10:100,
+#     },
 
-    PGFPlotsX.Plot({color = Ϟ[5], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x40[:,"SOC"].*100, y = x40[:,"R1"])),
-    PGFPlotsX.Plot({color = Ϟ[6], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x25[:,"SOC"].*100, y = x25[:,"R1"])),
-    PGFPlotsX.Plot({color = Ϟ[7], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x130[:,"SOC"].*100, y = x130[:,"R1"])),
+#     PGFPlotsX.Plot({color = Ϟ[5], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x40[:,"SOC"].*100, y = x40[:,"R1"])),
+#     PGFPlotsX.Plot({color = Ϟ[6], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x25[:,"SOC"].*100, y = x25[:,"R1"])),
+#     PGFPlotsX.Plot({color = Ϟ[7], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x130[:,"SOC"].*100, y = x130[:,"R1"])),
 
-    {
-        # xlabel="State-of-Charge ["*L"\%"*"]",
-        ylabel="Parameter C1",
+#     {
+#         # xlabel="State-of-Charge ["*L"\%"*"]",
+#         ylabel="Parameter C1",
 
-        ytick = 0:1000:6000
-        # xtick = 0:10:100,
-    },
+#         ytick = 0:1000:6000
+#         # xtick = 0:10:100,
+#     },
 
-    PGFPlotsX.Plot({color = Ϟ[5], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x40[:,"SOC"].*100, y = x40[:,"C1"])),
-    PGFPlotsX.Plot({color = Ϟ[6], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x25[:,"SOC"].*100, y = x25[:,"C1"])),
-    PGFPlotsX.Plot({color = Ϟ[7], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x130[:,"SOC"].*100, y = x130[:,"C1"])),
+#     PGFPlotsX.Plot({color = Ϟ[5], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x40[:,"SOC"].*100, y = x40[:,"C1"])),
+#     PGFPlotsX.Plot({color = Ϟ[6], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x25[:,"SOC"].*100, y = x25[:,"C1"])),
+#     PGFPlotsX.Plot({color = Ϟ[7], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x130[:,"SOC"].*100, y = x130[:,"C1"])),
 
-    {
-        xlabel="State-of-Charge ["*L"\%"*"]",
-        ylabel="Parameter R0",
-        # xmin = -0.1, 
-        # xmax = 65,
-        # ymax = 15,
-        # ymin = 0,
-        ytick = 0.00:0.001:0.016,
-        # xtick = 0:10:100,
-    },
+#     {
+#         xlabel="State-of-Charge ["*L"\%"*"]",
+#         ylabel="Parameter R0",
+#         # xmin = -0.1, 
+#         # xmax = 65,
+#         # ymax = 15,
+#         # ymin = 0,
+#         ytick = 0.00:0.001:0.016,
+#         # xtick = 0:10:100,
+#     },
 
-    PGFPlotsX.Plot({color = Ϟ[8], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x0[:,"SOC"].*100, y = x0[:,"R0"])),
-    LegendEntry("0 kPa"),
-    PGFPlotsX.Plot({color = Ϟ[10], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x50[:,"SOC"].*100, y = x50[:,"R0"])),
-    LegendEntry("50 kPa"),
-    PGFPlotsX.Plot({color = Ϟ[14], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x100[:,"SOC"].*100, y = x100[:,"R0"])),
-    LegendEntry("100 kPa"),
-    {
-        xlabel="State-of-Charge ["*L"\%"*"]",
-        ylabel="Parameter R1",
-        # xmin = -0.1, 
-        # xmax = 65,
-        # ymax = 15,
-        # ymin = 0,
-        # xtick = 0:10:100,
-    },
+#     PGFPlotsX.Plot({color = Ϟ[8], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x0[:,"SOC"].*100, y = x0[:,"R0"])),
+#     LegendEntry("0 kPa"),
+#     PGFPlotsX.Plot({color = Ϟ[10], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x50[:,"SOC"].*100, y = x50[:,"R0"])),
+#     LegendEntry("50 kPa"),
+#     PGFPlotsX.Plot({color = Ϟ[14], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x100[:,"SOC"].*100, y = x100[:,"R0"])),
+#     LegendEntry("100 kPa"),
+#     {
+#         xlabel="State-of-Charge ["*L"\%"*"]",
+#         ylabel="Parameter R1",
+#         # xmin = -0.1, 
+#         # xmax = 65,
+#         # ymax = 15,
+#         # ymin = 0,
+#         # xtick = 0:10:100,
+#     },
 
-    PGFPlotsX.Plot({color = Ϟ[8], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x0[:,"SOC"].*100, y = x0[:,"R1"])),
-    PGFPlotsX.Plot({color = Ϟ[10], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x50[:,"SOC"].*100, y = x50[:,"R1"])),
-    PGFPlotsX.Plot({color = Ϟ[14], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x100[:,"SOC"].*100, y = x100[:,"R1"])),
+#     PGFPlotsX.Plot({color = Ϟ[8], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x0[:,"SOC"].*100, y = x0[:,"R1"])),
+#     PGFPlotsX.Plot({color = Ϟ[10], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x50[:,"SOC"].*100, y = x50[:,"R1"])),
+#     PGFPlotsX.Plot({color = Ϟ[14], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x100[:,"SOC"].*100, y = x100[:,"R1"])),
 
-    {
-        xlabel="State-of-Charge ["*L"\%"*"]",
-        ylabel="Parameter C1",
+#     {
+#         xlabel="State-of-Charge ["*L"\%"*"]",
+#         ylabel="Parameter C1",
 
-        ytick = 0:2000:50000
-        # xtick = 0:10:100,
-    },
+#         ytick = 0:2000:50000
+#         # xtick = 0:10:100,
+#     },
 
-    PGFPlotsX.Plot({color = Ϟ[8], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x0[:,"SOC"].*100, y = x0[:,"C1"])),
-    PGFPlotsX.Plot({color = Ϟ[10], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x50[:,"SOC"].*100, y = x50[:,"C1"])),
-    PGFPlotsX.Plot({color = Ϟ[14], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x100[:,"SOC"].*100, y = x100[:,"C1"])),
-)
+#     PGFPlotsX.Plot({color = Ϟ[8], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x0[:,"SOC"].*100, y = x0[:,"C1"])),
+#     PGFPlotsX.Plot({color = Ϟ[10], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x50[:,"SOC"].*100, y = x50[:,"C1"])),
+#     PGFPlotsX.Plot({color = Ϟ[14], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x100[:,"SOC"].*100, y = x100[:,"C1"])),
+# )
 
 # pgfsave("figures/fit_plot.pdf", fit_plot, include_preamble = false)
 # pgfsave("figures/RCR0_plot.pdf", RCR0_plot, include_preamble = false)
 
 
 
-# P_plot = @pgf GroupPlot(
 
-#     {
-#         group_style =
-#         {
-#             xticklabels_at="edge bottom",
-#         },
-#         height = "8cm", width = "10cm",
-#         legend_pos= "south east"
+P_plot = @pgf GroupPlot(
+
+    {
+        group_style =
+        {
+            group_size = "2 by 1",
+            xticklabels_at="edge bottom",
+        },
+        height = "8cm", width = "10cm",
+        legend_pos= "south east"
 
 
-#     },
+    },
 
-#     {
-#         xlabel="Time [s]",
-#         ylabel="Voltage [V]",
-#         xmin = -0.1, 
-#         xmax = 65,
-#         # ymax = 15,
-#         # ymin = 0,
-#         # xtick = 0:10:100,
-#     },
+    {
+        xlabel="Time [s]",
+        ylabel="Voltage [V]",
+        xmin = 58, 
+        # xmax = 65,
+        # ymax = 15,
+        # ymin = 0,
+        # xtick = 0:10:100,
+    },
 
-#     Plot({color = Ϟ[5], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = data[:,"Test_Time(s)"], y = data[:,"Voltage(V)"])),
-#     LegendEntry("47 kPa Experimental"),
-#     Plot({color = Ϟ[7], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = data130[:,"Test_Time(s)"], y = data130[:,"Voltage(V)"])),
-#     LegendEntry("210 kPa Experimental"),
-#     Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = data[1:end-1,"Test_Time(s)"], y = v2)),
-#     LegendEntry("Pressure Fitted ECM"),
+    # PGFPlotsX.Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = mbpf40kpa_1[2:end,"Test_Time(s)"], y = mbpf40kpa_1[2:end,"Voltage(V)"])),
+    # LegendEntry("47 kPa Experimental"),
+    # PGFPlotsX.Plot({color = Ϟ[7], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = mbpf40kpa_1[2:end-1,"Test_Time(s)"], y = v40)),
+    # LegendEntry("47 kPa Pressure Fitted ECM"),
+    PGFPlotsX.Plot({color = Ϟ[6], "thick", style = {"dotted"}}, Table({x = "x", y = "y"}, x = mbpf130kpa_1[2:end-1,"Test_Time(s)"], y = v130)),
+    LegendEntry("210 kPa Pressure Fitted ECM"),
+    PGFPlotsX.Plot({color = Ϟ[9], "thick", style = {"dotted"}}, Table({x = "x", y = "y"}, x = mbpf130kpa_1[2:end-1,"Test_Time(s)"], y = v130_2)),
+    LegendEntry("210 kPa Pressure Fitted ECM"),
 
-# )
+    {
+        xlabel="Time [s]",
+        ylabel="Voltage [V]",
+        xmin = 58, 
+        # xmax = 65,
+        # ymax = 15,
+        # ymin = 0,
+        # xtick = 0:10:100,
+    },
+
+    PGFPlotsX.Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = mbpf0kpa_1[2:end,"Test_Time(s)"], y = mbpf0kpa_1[2:end,"Voltage(V)"])),
+    LegendEntry("0 kPa Experimental"),
+    PGFPlotsX.Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = mbpf100kpa_1[2:end,"Test_Time(s)"], y = mbpf100kpa_1[2:end,"Voltage(V)"])),
+    # LegendEntry("100 kPa Experimental"),
+    PGFPlotsX.Plot({color = Ϟ[7], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = mbpf0kpa_1[2:end-1,"Test_Time(s)"], y = v0)),
+    LegendEntry("0 kPa Pressure Fitted ECM"),
+    PGFPlotsX.Plot({color = Ϟ[6], "thick", style = {"dotted"}}, Table({x = "x", y = "y"}, x = mbpf100kpa_1[2:end-1,"Test_Time(s)"], y = v100)),
+    LegendEntry("100 kPa Pressure Fitted ECM"),
+
+
+)

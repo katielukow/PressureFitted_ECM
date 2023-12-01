@@ -3,7 +3,7 @@ module PIECM
 using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, XLSX, Statistics, DataStructures, Optim, PlotlyJS
 using StatsBase: sqL2dist, rmsd
  
-export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv, sqrzeros, HPPC, hppc_fun, hppc_calc, ecm_err_range,rmins, pres_contour
+export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv, sqrzeros, HPPC, hppc_fun, hppc_calc, ecm_err_range,rmins, pres_contour, soc_loop_2RC
 export ecm_discrete, costfunction, HPPC_n, data_imp, pres_avg, Capacity_Fade, ecm_fit, soc_loop, incorrect_pres, soc_range, soc_range_2RC, ecm_err_range_2RC
 
 # --------------- Fitting data import and filtering -----------------------------
@@ -352,14 +352,14 @@ function costfunction(x, n_RC, uᵢ, Δ, η, Q, OCV, Init_SOC, data)
 	return sqL2dist(v,data[1:end-1,"Voltage(V)"]) 
 end
 
-function ecm_fit(data, Q, ocv, soc, x0)
+function ecm_fit(data, Q, ocv, soc, x0, n_RC)
     uᵢ = data."Current(A)"
     Δ = data."Test_Time(s)"
     η = 0.999
-    costfunction_closed = κ->costfunction(κ, 2, uᵢ, Δ, η, Q, ocv, soc, data)
+    costfunction_closed = κ->costfunction(κ, n_RC, uᵢ, Δ, η, Q, ocv, soc, data)
     res = optimize(costfunction_closed, x0, iterations = 10000)
     x = Optim.minimizer(res)
-    v = ecm_discrete(x, 2, data."Current(A)", data."Test_Time(s)", η, Q, ocv, soc)
+    v = ecm_discrete(x, n_RC, data."Current(A)", data."Test_Time(s)", η, Q, ocv, soc)
     return v, x, res
 end
 
@@ -370,8 +370,25 @@ function soc_loop(data, max_soc, min_soc, Q, ocv, dis_step, char_step, soc_step)
     err = DataFrame([[],[],[]], ["RMSE", "MaxError", "L2dist"])
     for j in min_soc:0.1:max_soc
         hppcdata = hppc_fun(data, j*100, soc_step, 1, dis_step, char_step, 1)
-        vtemp, xtemp = ecm_fit(hppcdata, Q, ocv, j, [0.005, 2000, 0.010])
+        vtemp, xtemp = ecm_fit(hppcdata, Q, ocv, j, [0.005, 2000, 0.010], 1)
         push!(xmod, [j, xtemp[1], xtemp[2], xtemp[3]])
+        push!(err, [rmsd(vtemp, hppcdata[:,"Voltage(V)"][1:end-1]), maximum(vtemp.-hppcdata[:,"Voltage(V)"][1:end-1]), sqL2dist(vtemp, hppcdata[:,"Voltage(V)"][1:end-1])])
+        vmod[j] = [vtemp, hppcdata[:,"Test_Time(s)"][1:end-1]]
+        # print("RMSE:", rmsd(vtemp, hppcdata[:,"Voltage(V)"][1:end-1]))
+        # print(" Max error:",maximum(vtemp.-hppcdata[:,"Voltage(V)"][1:end-1]),"\n")
+    end
+    return vmod, xmod, err
+end
+
+function soc_loop_2RC(data, max_soc, min_soc, Q, ocv, dis_step, char_step, soc_step)
+    print("-------------- \n")
+    vmod = OrderedDict()
+    xmod = DataFrame([[],[],[],[],[],[]], ["SOC", "R1", "R2", "C1", "C2", "R0"])
+    err = DataFrame([[],[],[]], ["RMSE", "MaxError", "L2dist"])
+    for j in min_soc:0.1:max_soc
+        hppcdata = hppc_fun(data, j*100, soc_step, 1, dis_step, char_step, 1)
+        vtemp, xtemp = ecm_fit(hppcdata, Q, ocv, j, [0.005, 0.005, 30000, 30000, 0.010], 2)
+        push!(xmod, [j, xtemp[1], xtemp[2], xtemp[3], xtemp[4], xtemp[5]])
         push!(err, [rmsd(vtemp, hppcdata[:,"Voltage(V)"][1:end-1]), maximum(vtemp.-hppcdata[:,"Voltage(V)"][1:end-1]), sqL2dist(vtemp, hppcdata[:,"Voltage(V)"][1:end-1])])
         vmod[j] = [vtemp, hppcdata[:,"Test_Time(s)"][1:end-1]]
         # print("RMSE:", rmsd(vtemp, hppcdata[:,"Voltage(V)"][1:end-1]))

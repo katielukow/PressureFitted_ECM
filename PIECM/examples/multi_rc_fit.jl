@@ -17,7 +17,7 @@ df40 = soc_range_2RC(mbpf40kpa, 3.7, ocv1, 10, 20, LinRange(1000,30000,40), LinR
 df130 = soc_range_2RC(mbpf130kpa, 3.7, ocv1, 10, 20, LinRange(1000,30000,40), LinRange(0.00001, .010001, 10), [0.1, .1, 1])
 
 df0 = soc_range_2RC(P0kpa, 5.5, ocv2, 5, 19, LinRange(1000,30000,40), LinRange(0.00001, .010001, 10), [0.1, .1, 1])
-df50 = soc_range_2RC(mbpf50kpa, 5.5, ocv2, 5, 19, LinRange(1000,30000,40), LinRange(0.00001, .010001, 10), [0.1, .1, 1])
+df50 = soc_range_2RC(mbpf50kpa, 5.5, ocv2, 5, 19, LinRange(1000,600000,20), LinRange(0.00001, .020001, 10), [0.5, .1, 0.5])
 df100 = soc_range_2RC(mbpf100kpa, 5.5, ocv2, 5, 19, LinRange(1000,30000,40), LinRange(0.00001, .010001, 10), [0.1, .1, 1])
 
 jldsave("err25_2RC.jld2", data=df25)
