@@ -1,6 +1,6 @@
 module PIECM
 
-using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, XLSX, Statistics, DataStructures, Optim, PlotlyJS
+using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, XLSX, Statistics, DataStructures, Optim, PlotlyJS, Evolutionary
 using StatsBase: sqL2dist, rmsd
  
 export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv, sqrzeros, HPPC, hppc_fun, hppc_calc, ecm_err_range,rmins, pres_contour, soc_loop_2RC
@@ -276,7 +276,10 @@ function ecm_discrete(x, n_RC, uᵢ, Δ :: Float64, eta, Q, OCV, Init_SOC)
     #     B_RC[α] = (1-F)
     # end
 
-	for k in 2:length(uᵢ)-1
+	for k in eachindex(uᵢ)
+		if i == 1
+			continue
+		end
 		A_RC = exp(-(Δ)/(x[1]*x[2]))
         B_RC = 1 - exp(-(Δ)/(x[1]*x[2]))
         z[k+1] = z[k] - (η*((Δ)/3600) / Q) * uᵢ[k]
@@ -284,117 +287,158 @@ function ecm_discrete(x, n_RC, uᵢ, Δ :: Float64, eta, Q, OCV, Init_SOC)
 		v[k] = interp_linear(z[k]) - (x[1] * iᵣ[k]) - (x[3] * uᵢ[k])
     end
 
-    v[end] = v[end-1]
+    # v[end] = v[end-1]
 
     return v
 
 end
 
-function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , η, Q, OCV, Init_SOC)
+function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , eta, Q, OCV, Init_V)
         
-	interp_linear = linear_interpolation(OCV."State_of_Charge", OCV."Voltage") # Interpolation function for OCV based on capacity change
-	
+	interp_linear_init = linear_interpolation(OCV."Voltage", OCV."State_of_Charge") # Interpolation function for OCV based on capacity change
+	interp_linear = linear_interpolation(OCV."State_of_Charge", OCV."Voltage")
+
 	# # RC Params
     A_RC = sqrzeros(n_RC)
     B_RC = zeros(n_RC)
 
-    z = Array{Float64}(undef, length(uᵢ)) .= 0
-    v = Array{Float64}(undef, length(uᵢ)) .= 0
-    τ = Array{Float64}(undef, length(Δ)) .= 0	
+	num_points = length(uᵢ)
+    z = zeros(num_points)
+    v = zeros(num_points)
+    τ = diff([0; Δ]) # Calculate τ directly
+	τ[1] = 0 
 
 	uᵢ = -uᵢ # Changes charge / discharge convention to match Plett ISBN:978-1-63081-023-8
 
-	# Change time vector to τ for each index 
-	Δ .-= Δ[1]
-	for i in 1:length(Δ)-1
-		τ[i+1] = Δ[i+1] - Δ[i]
+	# Initial Values
+    v[1] = Init_V
+
+	if Init_V > OCV."Voltage"[end]
+		z[1] = 1
+	else
+		z[1] = interp_linear_init(Init_V)
 	end
 
-	# Initial Values
-    z[1] = Init_SOC
-    v[1] = interp_linear(Init_SOC)
-    iᵣ = zeros(length(uᵢ),n_RC)
-	γ = 1
+    iᵣ = zeros(num_points,n_RC)
 
-    for k in 1:length(uᵢ)-1
+
+    # for k in 1:length(uᵢ)-1
+	for k in eachindex(uᵢ)
+		if k == length(uᵢ)
+			continue
+		end
+		
+		if uᵢ[k] > 0
+			η = 1
+		else
+			η = 0.999
+		end
+
 		for α in 1:n_RC
 			F = exp(-τ[k]/(x[α]*x[(n_RC+α)]))
 			A_RC[α,α] = F
 			B_RC[α] = (1-F)
 		end
 
-		# F = exp(-τ[k]/(x[1]*x[2]))
-		# A_RC = F
-		# B_RC = (1-F)
-
-
         z[k+1] = z[k] - (η*((τ[k])/3600) / Q) * uᵢ[k]
-
-
-
 		iᵣ[k+1,:] = (A_RC * iᵣ[k,:] + B_RC * uᵢ[k])
 
-		# iᵣ[k+1] = (A_RC * iᵣ[k] + B_RC * uᵢ[k])
-
 		v[k] = interp_linear(z[k]) -  sum(x[1:n_RC] .* iᵣ[k,:]') - (x[end] * uᵢ[k]) 
-		# v[k] = interp_linear(z[k]) -  x[1] .* iᵣ[k] - (x[end] * uᵢ[k]) 
-
 
     end
 
-    return v[1:end-1]
+	v[end] = v[end-1]
+    
+	return v
 
 end
 
+x_1RC = [0.01, 1000, 0.01]
+x_2RC = [0.01, 0.01, 10000, 10000, 0.01]
 
 function costfunction(x, n_RC, uᵢ, Δ, η, Q, OCV, Init_SOC, data)
+	if n_RC == 1
+		x = x .* x_1RC
+	else n_RC == 2
+		x = x .* x_2RC
+	end
 	v = ecm_discrete(x, n_RC, uᵢ, Δ, η, Q, OCV, Init_SOC)
-	return sqL2dist(v,data[1:end-1,"Voltage(V)"]) 
+	return sqL2dist(v,data[:,"Voltage(V)"]) 
 end
 
-function ecm_fit(data, Q, ocv, soc, x0, n_RC)
-    uᵢ = data."Current(A)"
-    Δ = data."Test_Time(s)"
-    η = 0.999
-    costfunction_closed = κ->costfunction(κ, n_RC, uᵢ, Δ, η, Q, ocv, soc, data)
-    res = optimize(costfunction_closed, x0, iterations = 10000)
-    x = Optim.minimizer(res)
-    v = ecm_discrete(x, n_RC, data."Current(A)", data."Test_Time(s)", η, Q, ocv, soc)
-    return v, x, res
+function ecm_fit(data, capacity, open_circuit_voltage, state_of_charge, init_params, num_RC)
+    current = data."Current(A)"
+    time = data."Test_Time(s)"
+	efficiency = 0.999
+
+    costfunction_closed = κ->costfunction(κ, num_RC, current, time, efficiency, capacity, open_circuit_voltage, data[1, "Voltage(V)"], data)
+    result = Evolutionary.optimize(costfunction_closed, init_params, CMAES(sigma0=.1))
+	if num_RC == 1
+		params = result.minimizer .* x_1RC
+	else num_RC == 2
+		params = result.minimizer .* x_2RC
+	end
+	# params = result.minimizer .* [0.01, 1000, 0.01]
+    voltage = ecm_discrete(params, num_RC, data."Current(A)", data."Test_Time(s)", efficiency, capacity, open_circuit_voltage, data[1, "Voltage(V)"])
+    return voltage, params, result
 end
 
-function soc_loop(data, max_soc, min_soc, Q, ocv, dis_step, char_step, soc_step)
-    print("-------------- \n")
-    vmod = OrderedDict()
-    xmod = DataFrame([[],[],[],[]], ["SOC", "R1", "C1", "R0"])
-    err = DataFrame([[],[],[]], ["RMSE", "MaxError", "L2dist"])
-    for j in min_soc:0.1:max_soc
-        hppcdata = hppc_fun(data, j*100, soc_step, 1, dis_step, char_step, 1)
-        vtemp, xtemp = ecm_fit(hppcdata, Q, ocv, j, [0.005, 2000, 0.010], 1)
-        push!(xmod, [j, xtemp[1], xtemp[2], xtemp[3]])
-        push!(err, [rmsd(vtemp, hppcdata[:,"Voltage(V)"][1:end-1]), maximum(vtemp.-hppcdata[:,"Voltage(V)"][1:end-1]), sqL2dist(vtemp, hppcdata[:,"Voltage(V)"][1:end-1])])
-        vmod[j] = [vtemp, hppcdata[:,"Test_Time(s)"][1:end-1]]
-        # print("RMSE:", rmsd(vtemp, hppcdata[:,"Voltage(V)"][1:end-1]))
-        # print(" Max error:",maximum(vtemp.-hppcdata[:,"Voltage(V)"][1:end-1]),"\n")
+function soc_loop(data, max_soc, min_soc, capacity, open_circuit_voltage, discharge_step, charge_step, soc_step)
+    # print("-------------- \n")
+    voltages = OrderedDict()
+    all_params = DataFrame([[],[],[],[],[]], ["SOC", "R1", "C1", "R0", "Error"])
+    # error = DataFrame([[],[],[]], ["RMSE", "MaxError", "L2dist"])
+	results = []
+    for j in max_soc:-0.1:min_soc
+        hppc_data = hppc_fun(data, j*100, soc_step, 1, discharge_step, charge_step, 1)
+        
+		voltage_temp, params_temp, results_temp = ecm_fit(hppc_data, capacity, open_circuit_voltage, j, [0.9, 1, 0.9], 1)
+        
+		push!(all_params, [j, params_temp[1], params_temp[2], params_temp[3], sqL2dist(voltage_temp, hppc_data[:,"Voltage(V)"])])
+        
+		# push!(error, [rmsd(voltage_temp, hppc_data[:,"Voltage(V)"]), maximum(voltage_temp.-hppc_data[:,"Voltage(V)"]), sqL2dist(voltage_temp, hppc_data[:,"Voltage(V)"])])
+        voltages[j] = [voltage_temp, hppc_data[:,"Test_Time(s)"]]
+		
+		results = results_temp
     end
-    return vmod, xmod, err
+
+    return voltages, all_params, results
 end
 
-function soc_loop_2RC(data, max_soc, min_soc, Q, ocv, dis_step, char_step, soc_step)
-    print("-------------- \n")
-    vmod = OrderedDict()
-    xmod = DataFrame([[],[],[],[],[],[]], ["SOC", "R1", "R2", "C1", "C2", "R0"])
-    err = DataFrame([[],[],[]], ["RMSE", "MaxError", "L2dist"])
-    for j in min_soc:0.1:max_soc
-        hppcdata = hppc_fun(data, j*100, soc_step, 1, dis_step, char_step, 1)
-        vtemp, xtemp = ecm_fit(hppcdata, Q, ocv, j, [0.005, 0.005, 30000, 30000, 0.010], 2)
-        push!(xmod, [j, xtemp[1], xtemp[2], xtemp[3], xtemp[4], xtemp[5]])
-        push!(err, [rmsd(vtemp, hppcdata[:,"Voltage(V)"][1:end-1]), maximum(vtemp.-hppcdata[:,"Voltage(V)"][1:end-1]), sqL2dist(vtemp, hppcdata[:,"Voltage(V)"][1:end-1])])
-        vmod[j] = [vtemp, hppcdata[:,"Test_Time(s)"][1:end-1]]
-        # print("RMSE:", rmsd(vtemp, hppcdata[:,"Voltage(V)"][1:end-1]))
-        # print(" Max error:",maximum(vtemp.-hppcdata[:,"Voltage(V)"][1:end-1]),"\n")
+function soc_loop_2RC(data, max_soc, min_soc, capacity, open_circuit_voltage, discharge_step, charge_step, soc_step)
+
+	# print("---- ---------- \n")
+    voltages = OrderedDict()
+    all_params = DataFrame([[],[],[],[],[],[],[]], ["SOC", "R1", "R2", "C1", "C2", "R0", "Error"])
+    # error = DataFrame([[],[],[]], ["RMSE", "MaxError", "L2dist"])
+	results = []
+    for j in max_soc:-0.1:min_soc
+        hppc_data = hppc_fun(data, j*100, soc_step, 1, discharge_step, charge_step, 1)
+        
+		voltage_temp, params_temp, results_temp = ecm_fit(hppc_data, capacity, open_circuit_voltage, j, [0.9, 0.9, 1, 1, 0.9], 2)
+        
+		push!(all_params, [j, params_temp[1], params_temp[2], params_temp[3], params_temp[4], params_temp[5], sqL2dist(voltage_temp, hppc_data[:,"Voltage(V)"])])
+        
+		# push!(error, [rmsd(voltage_temp, hppc_data[:,"Voltage(V)"]), maximum(voltage_temp.-hppc_data[:,"Voltage(V)"]), sqL2dist(voltage_temp, hppc_data[:,"Voltage(V)"])])
+        voltages[j] = [voltage_temp, hppc_data[:,"Test_Time(s)"]]
+		
+		results = results_temp
     end
-    return vmod, xmod, err
+
+    return voltages, all_params, results
+    # print("-------------- \n")
+    # vmod = OrderedDict()
+    # xmod = DataFrame([[],[],[],[],[],[]], ["SOC", "R1", "R2", "C1", "C2", "R0"])
+    # err = DataFrame([[],[],[]], ["RMSE", "MaxError", "L2dist"])
+    # for j in min_soc:0.1:max_soc
+    #     hppcdata = hppc_fun(data, j*100, soc_step, 1, dis_step, char_step, 1)
+    #     vtemp, xtemp = ecm_fit(hppcdata, Q, ocv, j, [0.005, 0.005, 30000, 100000, 0.010], 2)
+    #     push!(xmod, [j, xtemp[1], xtemp[2], xtemp[3], xtemp[4], xtemp[5]])
+    #     push!(err, [rmsd(vtemp, hppcdata[:,"Voltage(V)"]), maximum(vtemp.-hppcdata[:,"Voltage(V)"]), sqL2dist(vtemp, hppcdata[:,"Voltage(V)"])])
+    #     vmod[j] = [vtemp, hppcdata[:,"Test_Time(s)"]]
+
+    # end
+    # return vmod, xmod, err
 end
 
 function incorrect_pres(model_data, exp_data, dis_step, char_step, soc_step)
@@ -492,18 +536,18 @@ end
 
 function soc_range_2RC(df, Q, ocv, soc_increment, d_step, C_range, R_range, soc_range)
 	srng = soc_range[1]:soc_range[2]:soc_range[3]
-	# Z = OrderedDict()
+	Z = OrderedDict()
 	print("-------------- \n")
 	err = DataFrame([[], [],[],[], [], [], []], [:SOC, :R0, :R1, :R2, :C1, :C2, :err])
 	for i in srng
 		print(i, "\n")
 		z = ecm_err_range_2RC(df, Q, ocv, i, soc_increment, d_step, C_range, R_range);
 		# min = rmins(z)
-		min = sort!(z, :Err)
-		push!(err, [i min[1, :R0] min[1, :R1] min[1, :R2] min[1, :C1] min[1, :C2] min[1, :Err]])
-		# Z[i] = z
+		# min = sort!(z, :Err)
+		# push!(err, [i min[1, :R0] min[1, :R1] min[1, :R2] min[1, :C1] min[1, :C2] min[1, :Err]])
+		Z[i] = z
 	end
-	return err
+	return Z
 end
 
 
@@ -517,7 +561,7 @@ function ecm_err_range_2RC(data, Q, ocv, soc, soc_increment, dstep, C_range, R_r
 
     current = df."Current(A)"
     test_time = df."Test_Time(s)"
-    voltage_end = df."Voltage(V)"[1:end-1]
+    voltage_end = df."Voltage(V)"
 
     results = DataFrame(R0 = Float64[], R1 = Float64[], R2 = Float64[], C1 = Float64[], C2 = Float64[], Err = Float64[])
     # resize!(results, length(R_range) * length(C_range) * length(R_range) * length(C_range) * length(zrng_array))
@@ -534,7 +578,7 @@ function ecm_err_range_2RC(data, Q, ocv, soc, soc_increment, dstep, C_range, R_r
                         c1 = C_range[m]
                         c2 = C_range[n]
 
-                        v_model = ecm_discrete([r1,r2, c1,c2, r0], 2, current, test_time, 0.999, Q, ocv, soc)
+                        v_model = ecm_discrete([r1,r2, c1,c2, r0], 2, current, test_time, 0.999, Q, ocv, voltage_end[1])
                         err = sqL2dist(v_model, voltage_end)
                         push!(results, [r0, r1, r2, c1, c2, err])
                         # results[z, :] = [r0, r1, r2, c1, c2, err]
