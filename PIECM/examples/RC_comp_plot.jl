@@ -36,13 +36,13 @@ ocv2 = pocv("data/OCV/230621_MBPF_PCharact_POCV_Mel_SLPBA442124_0kpa_25C_Channel
 
 
 # ECM param fitting
-v40, x40, error_40 =  soc_loop(mbpf40kpa, 1.0, 0.2, Q40, ocv1, 20, 22, 10)
-v25, x25, error_25 = soc_loop(mbpf25kpa, 1, 0.2, Q25, ocv1,  17, 19, 10)
-v130, x130, error_130 = soc_loop(mbpf130kpa, 1, 0.2, Q130, ocv1, 20, 22, 10)
+v40, x40, error_40 =  soc_loop(mbpf40kpa, 1.0, 0.2, Q40, ocv1, 20, 22, 10);
+v25, x25, error_25 = soc_loop(mbpf25kpa, 1, 0.2, Q25, ocv1,  17, 19, 10);
+v130, x130, error_130 = soc_loop(mbpf130kpa, 1, 0.2, Q130, ocv1, 20, 22, 10);
 
-v0, x0, error_0 = soc_loop(P0kpa, 1, 0.2, Q0, ocv2, 19, 21, 5)
-v50, x50, error_50 = soc_loop(mbpf50kpa, 1, 0.2, Q50, ocv2, 19, 21, 5)
-v100, x100, error_100 = soc_loop(mbpf100kpa, 1, 0.2, Q100, ocv2, 19, 21, 5)
+v0, x0, error_0 = soc_loop(P0kpa, 1, 0.2, Q0, ocv2, 19, 21, 5);
+v50, x50, error_50 = soc_loop(mbpf50kpa, 1, 0.2, Q50, ocv2, 19, 21, 5);
+v100, x100, error_100 = soc_loop(mbpf100kpa, 1, 0.2, Q100, ocv2, 19, 21, 5);
 
 # ECM param fitting 2RC
 v40_2RC, x40_2RC, error_40_2RC = soc_loop_2RC(mbpf40kpa, 1, 0.2, Q40, ocv1, 20, 22, 10);
@@ -54,18 +54,18 @@ v50_2RC, x50_2RC, error_50_2RC = soc_loop_2RC(mbpf50kpa, 1, 0.2, Q50, ocv2, 19, 
 v100_2RC, x100_2RC, error_100_2RC = soc_loop_2RC(mbpf100kpa, 1.0, 0.2, Q100, ocv2, 19, 21, 5);
 
 
-# p1 = scatter(x = x40[1:end-1,"SOC"], y = x40[1:end-1,"Error"], mode="lines", name="40 kPa")
-# p2 = scatter(x = x40_2RC[1:end-1,"SOC"], y = x40_2RC[1:end-1,"Error"], mode="lines", name="40 2RC kPa")
-# p3 = scatter(x = x25[1:end-1,"SOC"], y = x25[1:end-1,"Error"], mode="lines", name="25 kPa")
-# p4 = scatter(x = x25_2RC[1:end-1,"SOC"], y = x25_2RC[1:end-1,"Error"], mode="lines", name="25 2RC kPa")
-# p5 = scatter(x = x130[1:end-1,"SOC"], y = x130[1:end-1,"Error"], mode="lines", name="130 kPa")
-# p6 = scatter(x = x130_2RC[1:end-1,"SOC"], y = x130_2RC[1:end-1,"Error"], mode="lines", name="130 2RC kPa")
-# plot([p1,p2,p3,p4,p5,p6])
+p1 = scatter(x = x40[1:end-1,"SOC"], y = x40[1:end-1,"Error"], mode="lines", name="40 kPa")
+p2 = scatter(x = x40_2RC[1:end-1,"SOC"], y = x40_2RC[1:end-1,"Error"], mode="lines", name="40 2RC kPa")
+p3 = scatter(x = x25[1:end-1,"SOC"], y = x25[1:end-1,"Error"], mode="lines", name="25 kPa")
+p4 = scatter(x = x25_2RC[1:end-1,"SOC"], y = x25_2RC[1:end-1,"Error"], mode="lines", name="25 2RC kPa")
+p5 = scatter(x = x130[1:end-1,"SOC"], y = x130[1:end-1,"Error"], mode="lines", name="130 kPa")
+p6 = scatter(x = x130_2RC[1:end-1,"SOC"], y = x130_2RC[1:end-1,"Error"], mode="lines", name="130 2RC kPa")
+plot([p1,p2,p3,p4,p5,p6])
 
-# p7 = scatter(x = x0[:,"SOC"], y = x0[:,"Error"], mode="lines", name="0 kPa")
-# p8 = scatter(x = x0_2RC[:,"SOC"], y = x0_2RC[:,"Error"], mode="lines", name="0 2RC kPa")
-# p9 = scatter(x = x50[:,"SOC"], y = x50[:,"Error"], mode="lines", name="50 kPa")
-# p10 = scatter(x = x50_2RC[:,"SOC"], y = x50_2RC[:,"Error"], mode="lines", name="50 2RC kPa")
-# p11 = scatter(x = x100[:,"SOC"], y = x100[:,"Error"], mode="lines", name="100 kPa")
-# p12 = scatter(x = x100_2RC[:,"SOC"], y = x100_2RC[:,"Error"], mode="lines", name="100 2RC kPa")
-# plot([p7,p8,p9,p10,p11,p12])
+p7 = scatter(x = x0[:,"SOC"], y = x0[:,"Error"], mode="lines", name="0 kPa")
+p8 = scatter(x = x0_2RC[:,"SOC"], y = x0_2RC[:,"Error"], mode="lines", name="0 2RC kPa")
+p9 = scatter(x = x50[:,"SOC"], y = x50[:,"Error"], mode="lines", name="50 kPa")
+p10 = scatter(x = x50_2RC[:,"SOC"], y = x50_2RC[:,"Error"], mode="lines", name="50 2RC kPa")
+p11 = scatter(x = x100[:,"SOC"], y = x100[:,"Error"], mode="lines", name="100 kPa")
+p12 = scatter(x = x100_2RC[:,"SOC"], y = x100_2RC[:,"Error"], mode="lines", name="100 2RC kPa")
+plot([p7,p8,p9,p10,p11,p12])

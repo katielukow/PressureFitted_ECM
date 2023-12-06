@@ -372,7 +372,13 @@ function ecm_fit(data, capacity, open_circuit_voltage, state_of_charge, init_par
 	efficiency = 0.999
 
     costfunction_closed = κ->costfunction(κ, num_RC, current, time, efficiency, capacity, open_circuit_voltage, data[1, "Voltage(V)"], data)
-    result = Evolutionary.optimize(costfunction_closed, init_params, CMAES(sigma0=.1))
+    # result = Evolutionary.optimize(costfunction_closed, init_params, CMAES(sigma0=.1))
+	lower_bounds = zeros(length(init_params)) .+ 0.0001
+	upper_bounds = zeros(length(init_params)) .+ 10
+	inner_optimiser = LBFGS()
+	optimiser = Fminbox(inner_optimiser)
+
+	result = Optim.optimize(costfunction_closed, lower_bounds, upper_bounds, init_params, optimiser, Optim.Options(iterations=1000));
 	if num_RC == 1
 		params = result.minimizer .* x_1RC
 	else num_RC == 2
@@ -407,7 +413,7 @@ end
 
 function soc_loop_2RC(data, max_soc, min_soc, capacity, open_circuit_voltage, discharge_step, charge_step, soc_step)
 
-	# print("---- ---------- \n")
+	# print("--------------\n")
     voltages = OrderedDict()
     all_params = DataFrame([[],[],[],[],[],[],[]], ["SOC", "R1", "R2", "C1", "C2", "R0", "Error"])
     # error = DataFrame([[],[],[]], ["RMSE", "MaxError", "L2dist"])
@@ -423,6 +429,7 @@ function soc_loop_2RC(data, max_soc, min_soc, capacity, open_circuit_voltage, di
         voltages[j] = [voltage_temp, hppc_data[:,"Test_Time(s)"]]
 		
 		results = results_temp
+		print(j)
     end
 
     return voltages, all_params, results
