@@ -27,14 +27,20 @@ dc_0 = filter(row -> row."Step_Index" == 12, P0kpa)
 dc_50 = filter(row -> row."Step_Index" == 12, mbpf50kpa)
 dc_100 = filter(row -> row."Step_Index" == 12, mbpf100kpa)
 
+dc_40."Test_Time(s)" .= dc_40."Test_Time(s)" .- dc_40[1,"Test_Time(s)"]
+dc_130."Test_Time(s)" .= dc_130."Test_Time(s)" .- dc_130[1,"Test_Time(s)"]
+
+
 # ECM runs
 soc = 1.0
-d40 = ecm_discrete([err40[end, :R1], err40[end, :C1], err40[end, :R0]], 1, dc_40."Current(A)", dc_40."Test_Time(s)", 0.999, 3.7, ocv1, soc)
-d130 = ecm_discrete([err130[end, :R1], err130[end, :C1], err130[end, :R0]], 1, dc_130."Current(A)", dc_130."Test_Time(s)", 0.999, 3.7, ocv1, soc)
-d40_2RC = ecm_discrete([0.0010091,0.0030073,12000,30000,0.010914], 2, dc_40."Current(A)", dc_40."Test_Time(s)", 0.999, 3.7, ocv1, soc)
+v40_2RC = ecm_discrete([x40_2RC[1, :R1],x40_2RC[1, :R2], x40_2RC[1, :C1],x40_2RC[1, :C2], x40_2RC[end, :R0]], 2, dc_40."Current(A)", dc_40."Test_Time(s)", 0.999, Q40, ocv1, dc_40[1,"Voltage(V)"])
+
+v130_2RC = ecm_discrete([x130_2RC[1, :R1],x130_2RC[1, :R2], x130_2RC[1, :C1],x130_2RC[1, :C2], x130_2RC[end, :R0]], 2, dc_130."Current(A)", dc_130."Test_Time(s)", 0.999, Q130, ocv1, dc_130[1,"Voltage(V)"])
+
+
 
 trace1 = scatter(x = dc_40."Test_Time(s)", y = dc_40."Voltage(V)", mode="lines")
-trace2 = scatter(x = dc_40[1:end-1,"Test_Time(s)"], y = d40, mode="lines")
+trace2 = scatter(x = dc_40[:,"Test_Time(s)"], y = v40_2RC, mode="lines")
 trace3 = scatter(x = dc_130."Test_Time(s)", y = dc_130."Voltage(V)", mode="lines")
-trace4 = scatter(x = dc_40[1:end-1,"Test_Time(s)"], y = d40_2RC, mode="lines")
-plot([trace1,trace2, trace3, trace4])
+# trace4 = scatter(x = dc_40[1:end-1,"Test_Time(s)"], y = d40_2RC, mode="lines")
+plot([trace1,trace2, trace3])

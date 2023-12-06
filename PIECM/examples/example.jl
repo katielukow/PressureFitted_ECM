@@ -232,7 +232,7 @@ RCR0_2_plot = @pgf GroupPlot(
     {
         group_style =
         {
-            group_size = "3 by 2",
+            group_size = "5 by 2",
             xticklabels_at="edge bottom",
             # yticklabels_at="edge left",
             horizontal_sep = "2cm",
@@ -284,11 +284,39 @@ RCR0_2_plot = @pgf GroupPlot(
     },
 
     PGFPlotsX.Plot({color = Ϟ[5], "thick", style ={"dash dot"}}, Table({x = "x", y = "y"}, x = x40_2RC[:,"SOC"].*100, y = x40_2RC[:,"C1"])),
-    LegendEntry("40 kPa"),
+    # LegendEntry("40 kPa"),
     PGFPlotsX.Plot({color = Ϟ[6], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x25_2RC[:,"SOC"].*100, y = x25_2RC[:,"C1"])),
-    LegendEntry("130 kPa"),
+    # LegendEntry("130 kPa"),
     PGFPlotsX.Plot({color = Ϟ[7], "thick", style ={"dotted"}}, Table({x = "x", y = "y"}, x = x130_2RC[:,"SOC"].*100, y = x130_2RC[:,"C1"])),
-    LegendEntry("200 kPa"),
+    # LegendEntry("200 kPa"),
+    {
+        # xlabel="State-of-Charge ["*L"\%"*"]",
+        ylabel="Parameter R2",
+        # xmin = -0.1, 
+        # xmax = 65,
+        # ymax = 15,
+        # ymin = 0,
+        # xtick = 0:10:100,
+    },
+
+    PGFPlotsX.Plot({color = Ϟ[5], "thick", style ={"dash dot"}}, Table({x = "x", y = "y"}, x = x40_2RC[:,"SOC"].*100, y = x40_2RC[:,"R2"])),
+    PGFPlotsX.Plot({color = Ϟ[6], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x25_2RC[:,"SOC"].*100, y = x25_2RC[:,"R2"])),
+    PGFPlotsX.Plot({color = Ϟ[7], "thick", style ={"dotted"}}, Table({x = "x", y = "y"}, x = x130_2RC[:,"SOC"].*100, y = x130_2RC[:,"R2"])),
+
+    {
+        # xlabel="State-of-Charge ["*L"\%"*"]",
+        ylabel="Parameter C2",
+
+        # ytick = 0:1000:6000
+        # xtick = 0:10:100,
+    },
+
+    PGFPlotsX.Plot({color = Ϟ[5], "thick", style ={"dash dot"}}, Table({x = "x", y = "y"}, x = x40_2RC[:,"SOC"].*100, y = x40_2RC[:,"C2"])),
+    LegendEntry("40 kPa"),
+    PGFPlotsX.Plot({color = Ϟ[6], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x25_2RC[:,"SOC"].*100, y = x25_2RC[:,"C2"])),
+    LegendEntry("130 kPa"),
+    PGFPlotsX.Plot({color = Ϟ[7], "thick", style ={"dotted"}}, Table({x = "x", y = "y"}, x = x130_2RC[:,"SOC"].*100, y = x130_2RC[:,"C2"])),
+    LegendEntry("210 kPa"),
 
     {
         xlabel="State-of-Charge ["*L"\%"*"]",
@@ -330,11 +358,41 @@ RCR0_2_plot = @pgf GroupPlot(
     },
 
     PGFPlotsX.Plot({color = Ϟ[8], "thick", style ={"dash dot"}}, Table({x = "x", y = "y"}, x = x0_2RC[:,"SOC"].*100, y = x0_2RC[:,"C1"])),
-    LegendEntry("0 kPa"),
+    # LegendEntry("0 kPa"),
     PGFPlotsX.Plot({color = Ϟ[10], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x50_2RC[:,"SOC"].*100, y = x50_2RC[:,"C1"])),
-    LegendEntry("50 kPa"),
+    # LegendEntry("50 kPa"),
     PGFPlotsX.Plot({color = Ϟ[14], "thick", style ={"dotted"}}, Table({x = "x", y = "y"}, x = x100_2RC[:,"SOC"].*100, y = x100_2RC[:,"C1"])),
+    # LegendEntry("100 kPa"),
+    {
+        xlabel="State-of-Charge ["*L"\%"*"]",
+        ylabel="Parameter R2",
+        # xmin = -0.1, 
+        # xmax = 65,
+        # ymax = 15,
+        # ymin = 0,
+        # xtick = 0:10:100,
+    },
+
+    PGFPlotsX.Plot({color = Ϟ[8], "thick", style ={"dash dot"}}, Table({x = "x", y = "y"}, x = x0_2RC[:,"SOC"].*100, y = x0_2RC[:,"R2"])),
+    PGFPlotsX.Plot({color = Ϟ[10], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x50_2RC[:,"SOC"].*100, y = x50_2RC[:,"R2"])),
+    PGFPlotsX.Plot({color = Ϟ[14], "thick", style ={"dotted"}}, Table({x = "x", y = "y"}, x = x100_2RC[:,"SOC"].*100, y = x100_2RC[:,"R2"])),
+
+    {
+        xlabel="State-of-Charge ["*L"\%"*"]",
+        ylabel="Parameter C2",
+
+        # ytick = 0:2000:50000
+        # xtick = 0:10:100,
+    },
+
+    PGFPlotsX.Plot({color = Ϟ[8], "thick", style ={"dash dot"}}, Table({x = "x", y = "y"}, x = x0_2RC[:,"SOC"].*100, y = x0_2RC[:,"C2"])),
+    LegendEntry("0 kPa"),
+    PGFPlotsX.Plot({color = Ϟ[10], "thick", style ={"dashed"}}, Table({x = "x", y = "y"}, x = x50_2RC[:,"SOC"].*100, y = x50_2RC[:,"C2"])),
+    LegendEntry("50 kPa"),
+    PGFPlotsX.Plot({color = Ϟ[14], "thick", style ={"dotted"}}, Table({x = "x", y = "y"}, x = x100_2RC[:,"SOC"].*100, y = x100_2RC[:,"C2"])),
     LegendEntry("100 kPa"),
+    
+    
 )
 
 # pgfsave("figures/fit_plot.pdf", fit_plot, include_preamble = false)

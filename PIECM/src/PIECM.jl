@@ -1,6 +1,6 @@
 module PIECM
 
-using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, XLSX, Statistics, DataStructures, Optim, PlotlyJS, Evolutionary
+using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, XLSX, Statistics, DataStructures, Optim, PlotlyJS, Evolutionary, Distributions
 using StatsBase: sqL2dist, rmsd
  
 export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv, sqrzeros, HPPC, hppc_fun, hppc_calc, ecm_err_range,rmins, pres_contour, soc_loop_2RC
@@ -391,14 +391,17 @@ end
 
 function soc_loop(data, max_soc, min_soc, capacity, open_circuit_voltage, discharge_step, charge_step, soc_step)
     # print("-------------- \n")
+	x = Normal(1, 0.01)
+	
     voltages = OrderedDict()
     all_params = DataFrame([[],[],[],[],[]], ["SOC", "R1", "C1", "R0", "Error"])
     # error = DataFrame([[],[],[]], ["RMSE", "MaxError", "L2dist"])
 	results = []
     for j in max_soc:-0.1:min_soc
+		init_params = [rand(x), rand(x), rand(x)]
         hppc_data = hppc_fun(data, j*100, soc_step, 1, discharge_step, charge_step, 1)
         
-		voltage_temp, params_temp, results_temp = ecm_fit(hppc_data, capacity, open_circuit_voltage, j, [0.9, 1, 0.9], 1)
+		voltage_temp, params_temp, results_temp = ecm_fit(hppc_data, capacity, open_circuit_voltage, j, init_params, 1)
         
 		push!(all_params, [j, params_temp[1], params_temp[2], params_temp[3], sqL2dist(voltage_temp, hppc_data[:,"Voltage(V)"])])
         
@@ -406,6 +409,8 @@ function soc_loop(data, max_soc, min_soc, capacity, open_circuit_voltage, discha
         voltages[j] = [voltage_temp, hppc_data[:,"Test_Time(s)"]]
 		
 		results = results_temp
+
+		print(init_params, " ", all_params, "\n")
     end
 
     return voltages, all_params, results
@@ -414,14 +419,18 @@ end
 function soc_loop_2RC(data, max_soc, min_soc, capacity, open_circuit_voltage, discharge_step, charge_step, soc_step)
 
 	# print("--------------\n")
+	x = Normal(1, 0.1)
+	
     voltages = OrderedDict()
     all_params = DataFrame([[],[],[],[],[],[],[]], ["SOC", "R1", "R2", "C1", "C2", "R0", "Error"])
     # error = DataFrame([[],[],[]], ["RMSE", "MaxError", "L2dist"])
 	results = []
     for j in max_soc:-0.1:min_soc
+
+		init_params = [rand(x), rand(x), rand(x), rand(x), rand(x)]
         hppc_data = hppc_fun(data, j*100, soc_step, 1, discharge_step, charge_step, 1)
         
-		voltage_temp, params_temp, results_temp = ecm_fit(hppc_data, capacity, open_circuit_voltage, j, [0.9, 0.9, 1, 1, 0.9], 2)
+		voltage_temp, params_temp, results_temp = ecm_fit(hppc_data, capacity, open_circuit_voltage, j, init_params, 2)
         
 		push!(all_params, [j, params_temp[1], params_temp[2], params_temp[3], params_temp[4], params_temp[5], sqL2dist(voltage_temp, hppc_data[:,"Voltage(V)"])])
         
@@ -429,7 +438,6 @@ function soc_loop_2RC(data, max_soc, min_soc, capacity, open_circuit_voltage, di
         voltages[j] = [voltage_temp, hppc_data[:,"Test_Time(s)"]]
 		
 		results = results_temp
-		print(j)
     end
 
     return voltages, all_params, results
@@ -476,7 +484,7 @@ function ecm_err_range(data, Q, ocv, soc, soc_increment, dstep, C1_range, R1_ran
     errors = OrderedDict{Float64, Matrix{Float64}}()
     current = df."Current(A)"
     test_time = df."Test_Time(s)"
-    voltage_end = df."Voltage(V)"[1:end-1]
+    voltage_end = df."Voltage(V)"
     
     err_matrix = zeros(length(xrng) + 1, length(yrng) + 1)
     err_matrix[1, 2:end] .= yrng
@@ -487,7 +495,7 @@ function ecm_err_range(data, Q, ocv, soc, soc_increment, dstep, C1_range, R1_ran
     for (k,r0) in enumerate(zrng)
         for (i,r1) in enumerate(xrng)
             for (j,c1) in enumerate(yrng)
-                v_model = ecm_discrete([r1, c1, r0], 1, current, test_time, 0.999, Q, ocv, soc)
+                v_model = ecm_discrete([r1, c1, r0], 1, current, test_time, 0.999, Q, ocv, voltage_end[1])
                 err = sqL2dist(v_model, voltage_end)
                 err_matrix[i+1, j+1] = err
             end
@@ -517,7 +525,7 @@ function rmins(data)
 end
 
 function pres_contour(dict, min, title)
-	t1 = contour(z=dict[min[1,:R0]][2:end, 2:end], x=dict[min[1,:R0]][1, 2:end], y=dict[min[1,:R0]][2:end,1], contours_start = 0, contours_end = 0.5, contours_size = 0.025, colorbar_title="Error", showscale=true)
+	t1 = contour(z=dict[min[1,:R0]][2:13, 3:end], x=dict[min[1,:R0]][1, 2:13], y=dict[min[1,:R0]][3:end,1], contours_start =0,contours_end=2, colorbar_title="Error", showscale=true)
 	t2 = scatter(x=[min[1,:C1]],y=[min[1,:R1]], mode="markers", showlegend = false)
 	layout1 = Layout(title=title)
 	

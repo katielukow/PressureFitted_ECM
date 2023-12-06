@@ -44,7 +44,7 @@ v0, x0, error_0 = soc_loop(P0kpa, 1, 0.2, Q0, ocv2, 19, 21, 5);
 v50, x50, error_50 = soc_loop(mbpf50kpa, 1, 0.2, Q50, ocv2, 19, 21, 5);
 v100, x100, error_100 = soc_loop(mbpf100kpa, 1, 0.2, Q100, ocv2, 19, 21, 5);
 
-# ECM param fitting 2RC
+# # ECM param fitting 2RC
 v40_2RC, x40_2RC, error_40_2RC = soc_loop_2RC(mbpf40kpa, 1, 0.2, Q40, ocv1, 20, 22, 10);
 v25_2RC, x25_2RC, error_25_2RC = soc_loop_2RC(mbpf25kpa, 1, 0.2, Q25, ocv1, 17, 19, 10);
 v130_2RC, x130_2RC, error_130_2RC = soc_loop_2RC(mbpf130kpa, 1, 0.2, Q130, ocv1, 20, 22, 10);
