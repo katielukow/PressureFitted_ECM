@@ -1,7 +1,10 @@
 module PIECM
 
-using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, XLSX, Statistics, DataStructures, Optim, PlotlyJS, Evolutionary, Distributions
+using CSV, DataFrames, Dates, Infiltrator, JLD2, Interpolations, Statistics
+using Optim, PlotlyJS, Evolutionary, LinearAlgebra
 using StatsBase: sqL2dist, rmsd
+using DataStructures: OrderedDict
+using Distributions: Normal, rand
  
 export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv, sqrzeros, HPPC, hppc_fun, hppc_calc, ecm_err_range,rmins, pres_contour, soc_loop_2RC
 export ecm_discrete, costfunction, HPPC_n, data_imp, pres_avg, Capacity_Fade, ecm_fit, soc_loop, incorrect_pres, soc_range, soc_range_2RC, ecm_err_range_2RC
@@ -29,7 +32,6 @@ function data_import_csv(file_name, format)
 
 	return df
 end
-data_import_excel(file_name, sheet_name) = DataFrame(XLSX.readtable(file_name, sheet_name))
 
 # Imports pressure data as a DataFrame and matches date format to yyyy/mm/dd HH:MM:SS
 function pressure_dateformat_fix(file_name)
@@ -101,8 +103,6 @@ function pocv(file_name, POCV_discharge_step, POCV_charge_step, OCV_steps)
 	# Find average between charge and discharge curves
 	POCV_SOC = ((POCVd[:,1] .+ POCVc[:,1]) ./ 2) ./ 100
 	POCV_V = (POCVd[:,2] .+ POCVc[:,2]) ./ 2
-
-	# @infiltrate cond=true
 
 
 	return DataFrame(State_of_Charge=POCV_SOC, Voltage=POCV_V,DischargeVoltage=POCVd[:,2],ChargeVoltage=POCVc[:,2],DischargeEnergy=POCVd[:,3])
@@ -244,95 +244,29 @@ end
 # η = coloumbic efficiency 
 # Q = capacity [Ah]
 
-# Static time step forward model
-function ecm_discrete(x, n_RC, uᵢ, Δ :: Float64, eta, Q, OCV, Init_SOC)
-    
-	interp_linear = linear_interpolation(OCV."State_of_Charge", OCV."Voltage") # Interpolation function for OCV based on capacity change
-	
-	# # RC Params
-    A_RC = sqrzeros(n_RC)
-    B_RC = zeros(n_RC)
+function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , eta, Q, OCV_end, Init_V, interp_linear_init, interp_linear)
 
-    z = Array{Float64}(undef, length(uᵢ))
-    iᵣ = Array{Float64}(undef, length(uᵢ))
-    v = Array{Float64}(undef, length(uᵢ))
-
-    uᵢ = uᵢ .* -1 # Changes charge / discharge convention to match Plett ISBN:978-1-63081-023-8
-
-	# Initial Values
-    z[1] = Init_SOC
-	if iᵣ[1] < 0
-		η = 1
-		z[2] = z[1] - (η*((Δ)/3600) / Q) * uᵢ[1]
-	else
-	end
-	v[1] = interp_linear(Init_SOC)
-    v[1] = interp_linear(Init_SOC)
-    iᵣ[1]=0 # can this be a proper term?
-
-	# for α in 1:n_RC
-    #     F = exp(-Δ/(x[1]*x[2]))
-    #     A_RC[α,α] = F
-    #     B_RC[α] = (1-F)
-    # end
-
-	for k in eachindex(uᵢ)
-		if i == 1
-			continue
-		end
-		A_RC = exp(-(Δ)/(x[1]*x[2]))
-        B_RC = 1 - exp(-(Δ)/(x[1]*x[2]))
-        z[k+1] = z[k] - (η*((Δ)/3600) / Q) * uᵢ[k]
-		iᵣ[k+1] = - A_RC * iᵣ[k] - B_RC * uᵢ[k] # solve matrix dimensionality issues for multiple RC pairs
-		v[k] = interp_linear(z[k]) - (x[1] * iᵣ[k]) - (x[3] * uᵢ[k])
-    end
-
-    # v[end] = v[end-1]
-
-    return v
-
-end
-
-function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , eta, Q, OCV, Init_V)
-        
-	interp_linear_init = linear_interpolation(OCV."Voltage", OCV."State_of_Charge") # Interpolation function for OCV based on capacity change
-	interp_linear = linear_interpolation(OCV."State_of_Charge", OCV."Voltage")
-
-	# # RC Params
-    A_RC = sqrzeros(n_RC)
-    B_RC = zeros(n_RC)
+	# RC Params
+    A_RC = Matrix{Float64}(I, n_RC, n_RC) 
+    B_RC = Vector{Float64}(undef, n_RC) 
 
 	num_points = length(uᵢ)
-    z = zeros(num_points)
-    v = zeros(num_points)
-    τ = diff([0; Δ]) # Calculate τ directly
+    z = Array{Float64}(undef,num_points)
+    v = Array{Float64}(undef,num_points)
+    τ = diff(vcat(0, Δ)) # Calculate τ directly
 	τ[1] = 0 
-
 	uᵢ = -uᵢ # Changes charge / discharge convention to match Plett ISBN:978-1-63081-023-8
 
 	# Initial Values
     v[1] = Init_V
-
-	if Init_V > OCV."Voltage"[end]
-		z[1] = 1
-	else
-		z[1] = interp_linear_init(Init_V)
-	end
-
-    iᵣ = zeros(num_points,n_RC)
+	z[1] = Init_V > OCV_end ? 1.0 : interp_linear_init(Init_V)
 
 
-    # for k in 1:length(uᵢ)-1
-	for k in eachindex(uᵢ)
-		if k == length(uᵢ)
-			continue
-		end
-		
-		if uᵢ[k] > 0
-			η = 1
-		else
-			η = 0.999
-		end
+    iᵣ = Matrix{Float64}(undef, num_points, n_RC) #zeros(num_points,n_RC)
+	iᵣ[1,:] .= 0
+
+	@inbounds for k in 1:num_points-1
+		η = uᵢ[k] > 0 ? 1.0 : 0.999
 
 		for α in 1:n_RC
 			F = exp(-τ[k]/(x[α]*x[(n_RC+α)]))
@@ -340,10 +274,9 @@ function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , eta, Q, OCV, Init_V)
 			B_RC[α] = (1-F)
 		end
 
-        z[k+1] = z[k] - (η*((τ[k])/3600) / Q) * uᵢ[k]
-		iᵣ[k+1,:] = (A_RC * iᵣ[k,:] + B_RC * uᵢ[k])
-
-		v[k] = interp_linear(z[k]) -  sum(x[1:n_RC] .* iᵣ[k,:]') - (x[end] * uᵢ[k]) 
+        z[k+1] = z[k] - (η * (τ[k]/3600) / Q) * uᵢ[k]
+		iᵣ[k+1,:] .= A_RC * iᵣ[k,:] .+ B_RC .* uᵢ[k]
+		v[k] = interp_linear(z[k]) -  dot(x[1:n_RC], iᵣ[k,:]) - (x[end] * uᵢ[k]) 
 
     end
 
@@ -553,14 +486,9 @@ function soc_range_2RC(df, Q, ocv, soc_increment, d_step, C_range, R_range, soc_
 	srng = soc_range[1]:soc_range[2]:soc_range[3]
 	Z = OrderedDict()
 	print("-------------- \n")
-	err = DataFrame([[], [],[],[], [], [], []], [:SOC, :R0, :R1, :R2, :C1, :C2, :err])
-	for i in srng
-		print(i, "\n")
-		z = ecm_err_range_2RC(df, Q, ocv, i, soc_increment, d_step, C_range, R_range);
-		# min = rmins(z)
-		# min = sort!(z, :Err)
-		# push!(err, [i min[1, :R0] min[1, :R1] min[1, :R2] min[1, :C1] min[1, :C2] min[1, :Err]])
-		Z[i] = z
+
+	Threads.@threads for i in srng
+		Z[i] = ecm_err_range_2RC(df, Q, ocv, i, soc_increment, d_step, C_range, R_range)
 	end
 	return Z
 end
@@ -569,44 +497,40 @@ end
 function ecm_err_range_2RC(data, Q, ocv, soc, soc_increment, dstep, C_range, R_range)
 
     df = hppc_fun(data, soc*100, soc_increment, 1, dstep, dstep+2, 1)
-    r0_init = hppc_calc(df, round(((100 - soc*100) / soc_increment)), df[:,"Voltage(V)"][1])
-	zrng = r0_init-0.005:0.001:r0_init+0.002
+    # r0_init = hppc_calc(df, round(((100 - soc*100) / soc_increment)), df[:,"Voltage(V)"][1])
+	# zrng = r0_init-0.005:0.001:r0_init+0.002
+	zrng = 0.01-0.005:0.001:0.01+0.002
     zrng_array = collect(enumerate(zrng))  # Convert to array for threading
 
+	interp_linear_init = linear_interpolation(ocv."Voltage", ocv."State_of_Charge") # Interpolation function for OCV based on capacity change
+	interp_linear = linear_interpolation(ocv."State_of_Charge", ocv."Voltage")
 
-    current = df."Current(A)"
-    test_time = df."Test_Time(s)"
-    voltage_end = df."Voltage(V)"
+    # current = df."Current(A)"
+    # test_time = df."Test_Time(s)"
+    # voltage_end = df."Voltage(V)"
 
-    results = DataFrame(R0 = Float64[], R1 = Float64[], R2 = Float64[], C1 = Float64[], C2 = Float64[], Err = Float64[])
+    # results = DataFrame(R0 = Float64[], R1 = Float64[], R2 = Float64[], C1 = Float64[], C2 = Float64[], Err = Float64[])
     # resize!(results, length(R_range) * length(C_range) * length(R_range) * length(C_range) * length(zrng_array))
-
+	# results = Array{Float64}(undef, length(R_range) * length(C_range) * length(R_range) * length(C_range) * length(zrng_array), 6)
+	results = Array{Float64}(undef,sum(1:length(R_range))*sum(1:length(C_range))*length(zrng_array), 6)
     z = 1
-    for (k,r0) in zrng_array
+    for (_,r0) in zrng_array
         # print(k, "\n")
         for i in eachindex(R_range)
-            for j in eachindex(R_range)
+            for j in i:length(R_range)
                 for m in eachindex(C_range)
-                    for n in eachindex(C_range)
-                        r1 = R_range[i]
-                        r2 = R_range[j]
-                        c1 = C_range[m]
-                        c2 = C_range[n]
-
-                        v_model = ecm_discrete([r1,r2, c1,c2, r0], 2, current, test_time, 0.999, Q, ocv, voltage_end[1])
-                        err = sqL2dist(v_model, voltage_end)
-                        push!(results, [r0, r1, r2, c1, c2, err])
-                        # results[z, :] = [r0, r1, r2, c1, c2, err]
+                    for n in m:length(C_range)
+                        results[z, :] .= [r0, R_range[i], R_range[j], C_range[m], C_range[n], sqL2dist(ecm_discrete([R_range[i],R_range[j], C_range[m],C_range[n], r0], 2, df."Current(A)", df."Test_Time(s)", 0.999, Q, ocv."Voltage"[end], df."Voltage(V)"[1], interp_linear_init, interp_linear), df."Voltage(V)")]
                         z+=1
                     end
                 end
             end
         end
+		
         # append!(results, local_results)
         # errors[round(r0, digits = 6)] = df
         # errors[round(r0, digits = 6)] = copy(err_matrix)
     end
-
     return results
 end
 
