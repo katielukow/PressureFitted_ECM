@@ -22,13 +22,13 @@ mbpf50kpa.Date_Time .= replace.(mbpf50kpa.Date_Time, "\t" => "")
 mbpf100kpa.Date_Time .= replace.(mbpf100kpa.Date_Time, "\t" => "")
 
 soc = 0.5
-mbpf25kpa_1 = hppc_fun(mbpf25kpa, soc*100, 10, 1, 17, 19, 1);
-mbpf40kpa_1 = hppc_fun(mbpf40kpa, soc*100, 10, 1, 20, 22, 1);
-mbpf130kpa_1 = hppc_fun(mbpf130kpa, soc*100, 10, 1, 20, 22, 1);
+mbpf25kpa_1 = hppc_fun(mbpf25kpa, soc*100, 10, 17, 1);
+mbpf40kpa_1 = hppc_fun(mbpf40kpa, soc*100, 10, 20, 1);
+mbpf130kpa_1 = hppc_fun(mbpf130kpa, soc*100, 10, 20, 1);
 
-mbpf0kpa_1 = hppc_fun(P0kpa, soc*100, 5, 1, 19, 21, 1);
-mbpf50kpa_1 = hppc_fun(mbpf50kpa, soc*100, 5, 1, 19, 21, 1);
-mbpf100kpa_1 = hppc_fun(mbpf100kpa, 1*100, 5, 1, 19, 21, 1);
+mbpf0kpa_1 = hppc_fun(P0kpa, soc*100, 5, 19, 1);
+mbpf50kpa_1 = hppc_fun(mbpf50kpa, soc*100, 5, 19, 1);
+mbpf100kpa_1 = hppc_fun(mbpf100kpa, 1*100, 5, 19, 1);
 
 
 # # Dictionary of data
@@ -451,6 +451,8 @@ P_plot = @pgf GroupPlot(
 
 pgfsave("figures/Pmod1_plot.pdf", P_plot, include_preamble = false)
 
+pgfsave("figures/Errmod1_plot.pdf", Error_plot, include_preamble = false)
+
 Error_plot = @pgf GroupPlot(
 
     {
@@ -476,19 +478,19 @@ Error_plot = @pgf GroupPlot(
         # ytick = 0:0.01:0.2,
         # xtick = 0:10:100,
     },
-    PGFPlotsX.Plot({color = Ϟ[7], "thick", style = {"dotted"}}, Table({x = "x", y = "y"}, x = x40[:,"SOC"], y = x40[:,"Error"])),
-    LegendEntry("40 kPa 1RC"),
-    PGFPlotsX.Plot({color = Ϟ[7]}, Table({x = "x", y = "y"}, x = x40_2RC[:,"SOC"], y = x40_2RC[:,"Error"])),
-    LegendEntry("40kPa 2RC"),
+    PGFPlotsX.Plot({color = Ϟ[7], "thick", style = {"dotted"}}, Table({x = "x", y = "y"}, x = x0[:,"SOC"], y = x0[:,"Error"])),
+    LegendEntry("0 kPa 1RC"),
+    PGFPlotsX.Plot({color = Ϟ[7]}, Table({x = "x", y = "y"}, x = x0_2RC[:,"SOC"], y = x0_2RC[:,"Error"])),
+    LegendEntry("0kPa 2RC"),
 
-    PGFPlotsX.Plot({color = Ϟ[6], "thick", style = {"dotted"}}, Table({x = "x", y = "y"}, x = x25[:,"SOC"], y = x25[:,"Error"])),
-    LegendEntry("130kPa 1RC"),
-    PGFPlotsX.Plot({color = Ϟ[6]}, Table({x = "x", y = "y"}, x = x25_2RC[:,"SOC"], y = x25_2RC[:,"Error"])),
-    LegendEntry("130kPa 2RC"),
+    PGFPlotsX.Plot({color = Ϟ[6], "thick", style = {"dotted"}}, Table({x = "x", y = "y"}, x = x50[:,"SOC"], y = x50[:,"Error"])),
+    LegendEntry("50kPa 1RC"),
+    PGFPlotsX.Plot({color = Ϟ[6]}, Table({x = "x", y = "y"}, x = x50_2RC[:,"SOC"], y = x50_2RC[:,"Error"])),
+    LegendEntry("50kPa 2RC"),
 
-    PGFPlotsX.Plot({color = Ϟ[8], "thick", style = {"dotted"}}, Table({x = "x", y = "y"}, x = x130[:,"SOC"], y = x130[:,"Error"])),
+    PGFPlotsX.Plot({color = Ϟ[8], "thick", style = {"dotted"}}, Table({x = "x", y = "y"}, x = x100[:,"SOC"], y = x100[:,"Error"])),
     LegendEntry("210kPa 1RC"),
-    PGFPlotsX.Plot({color = Ϟ[8]}, Table({x = "x", y = "y"}, x = x130_2RC[:,"SOC"], y = x130_2RC[:,"Error"])),
-    LegendEntry("210kPa 2RC"),
+    PGFPlotsX.Plot({color = Ϟ[8]}, Table({x = "x", y = "y"}, x = x100_2RC[:,"SOC"], y = x100_2RC[:,"Error"])),
+    LegendEntry("100kPa 2RC"),
 
 )

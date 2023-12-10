@@ -17,17 +17,21 @@ Q100 = filter(row -> row.Step_Index == 6, mbpf100kpa)[end,"Discharge_Capacity(Ah
 ocv2 = pocv("data/OCV/230621_MBPF_PCharact_POCV_Mel_SLPBA442124_0kpa_25C_Channel_3_Wb_1.CSV", 11, 13, 200)
 
 df25 = soc_range_2RC(mbpf25kpa, Q25, ocv1, 10, 17, LinRange(1000,40000,80), LinRange(0.00001, .010001, 10), [0.2, .1, 1])
-df40 = soc_range_2RC(mbpf40kpa, Q40, ocv1, 10, 20, LinRange(1000,40000,80), LinRange(0.00001, .010001, 10), [0.2, .1, 1])
-df130 = soc_range_2RC(mbpf130kpa, Q130, ocv1, 10, 20, LinRange(1000,40000,80), LinRange(0.00001, .010001, 10), [0.2, .1, 1])
-
-df0 = soc_range_2RC(P0kpa, Q0, ocv2, 5, 19, LinRange(1000,100000,100), LinRange(0.00001, .010001, 10), [0.2, .1, 1])
-df50 = soc_range_2RC(mbpf50kpa, Q50, ocv2, 5, 19, LinRange(1000,100000,100), LinRange(0.00001, .010001, 10), [0.2, .1, 1])
-df100 = soc_range_2RC(mbpf100kpa, Q100, ocv2, 5, 19, LinRange(1000,100000,100), LinRange(0.00001, .010001, 10), [0.2, .1, 1])
-
 jldsave("err25_2RC.jld2", data=df25)
+df40 = soc_range_2RC(mbpf40kpa, Q40, ocv1, 10, 20, LinRange(1000,40000,80), LinRange(0.00001, .010001, 10), [0.2, .1, 1])
 jldsave("err40_2RC.jld2", data=df40)
+df130 = soc_range_2RC(mbpf130kpa, Q130, ocv1, 10, 20, LinRange(1000,40000,80), LinRange(0.00001, .010001, 10), [0.2, .1, 1])
 jldsave("err130_2RC.jld2", data=df130)
 
+df0 = soc_range_2RC(P0kpa, Q0, ocv2, 5, 19, LinRange(1000,100000,100), LinRange(0.00001, .010001, 10), [0.2, .1, 1])
 jldsave("err0_2RC.jld2", data=df0)
+df50 = soc_range_2RC(mbpf50kpa, Q50, ocv2, 5, 19, LinRange(1000,100000,100), LinRange(0.00001, .010001, 10), [0.2, .1, 1.0])
 jldsave("err50_2RC.jld2", data=df50)
+df100 = soc_range_2RC(mbpf100kpa, Q100, ocv2, 5, 19, LinRange(1000,100000,100), LinRange(0.00001, .010001, 10), [0.2, .1, 1])
 jldsave("err100_2RC.jld2", data=df100)
+
+
+
+
+
+

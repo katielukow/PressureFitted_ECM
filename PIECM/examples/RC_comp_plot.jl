@@ -1,21 +1,5 @@
 using PIECM, Statistics, StatsBase, DataStructures, DataFrames, PGFPlotsX, JLD2, BenchmarkTools
 
-# ECM param import
-# err25 = jldopen("JLD2_ECMParam/err25.jld2")["data"]
-# err40 = jldopen("JLD2_ECMParam/err40.jld2")["data"]
-# err130 = jldopen("JLD2_ECMParam/err130.jld2")["data"]
-
-# err0 = jldopen("JLD2_ECMParam/err0.jld2")["data"]
-# err50 = jldopen("JLD2_ECMParam/err50.jld2")["data"]
-# err100 = jldopen("JLD2_ECMParam/err100.jld2")["data"]
-
-# err25_2RC = jldopen("JLD2_ECMParam/err25_2RC.jld2")["data"]
-# err40_2RC = jldopen("JLD2_ECMParam/err40_2RC.jld2")["data"]
-# err130_2RC = jldopen("JLD2_ECMParam/err130_2RC.jld2")["data"]
-
-# err0_2RC = jldopen("JLD2_ECMParam/err0_2RC.jld2")["data"]
-# err50_2RC = jldopen("JLD2_ECMParam/err50_2RC.jld2")["data"]
-# err100_2RC = jldopen("JLD2_ECMParam/err100_2RC.jld2")["data"]
 
 # Data Import
 mbpf25kpa = data_import_csv("data/HPPC/230320_MBPF_Investigation_25kpa_11_0043_Channel_6_Wb_1.CSV", "old")
@@ -35,7 +19,7 @@ Q100 = filter(row -> row.Step_Index == 6, mbpf100kpa)[end,"Discharge_Capacity(Ah
 ocv2 = pocv("data/OCV/230621_MBPF_PCharact_POCV_Mel_SLPBA442124_0kpa_25C_Channel_3_Wb_1.CSV", 11, 13, 200)
 
 
-# ECM param fitting
+# # ECM param fitting
 v40, x40, error_40 =  soc_loop(mbpf40kpa, 1.0, 0.2, Q40, ocv1, 20, 22, 10);
 v25, x25, error_25 = soc_loop(mbpf25kpa, 1, 0.2, Q25, ocv1,  17, 19, 10);
 v130, x130, error_130 = soc_loop(mbpf130kpa, 1, 0.2, Q130, ocv1, 20, 22, 10);
@@ -44,7 +28,7 @@ v0, x0, error_0 = soc_loop(P0kpa, 1, 0.2, Q0, ocv2, 19, 21, 5);
 v50, x50, error_50 = soc_loop(mbpf50kpa, 1, 0.2, Q50, ocv2, 19, 21, 5);
 v100, x100, error_100 = soc_loop(mbpf100kpa, 1, 0.2, Q100, ocv2, 19, 21, 5);
 
-# # ECM param fitting 2RC
+# # # ECM param fitting 2RC
 v40_2RC, x40_2RC, error_40_2RC = soc_loop_2RC(mbpf40kpa, 1, 0.2, Q40, ocv1, 20, 22, 10);
 v25_2RC, x25_2RC, error_25_2RC = soc_loop_2RC(mbpf25kpa, 1, 0.2, Q25, ocv1, 17, 19, 10);
 v130_2RC, x130_2RC, error_130_2RC = soc_loop_2RC(mbpf130kpa, 1, 0.2, Q130, ocv1, 20, 22, 10);
@@ -68,4 +52,4 @@ p9 = scatter(x = x50[:,"SOC"], y = x50[:,"Error"], mode="lines", name="50 kPa")
 p10 = scatter(x = x50_2RC[:,"SOC"], y = x50_2RC[:,"Error"], mode="lines", name="50 2RC kPa")
 p11 = scatter(x = x100[:,"SOC"], y = x100[:,"Error"], mode="lines", name="100 kPa")
 p12 = scatter(x = x100_2RC[:,"SOC"], y = x100_2RC[:,"Error"], mode="lines", name="100 2RC kPa")
-plot([p7,p8,p9,p10,p11,p12])
+# plot([p7,p8,p9,p10,p11,p12])

@@ -32,20 +32,20 @@ err50, Z50 = soc_range(mbpf50kpa, Q50, ocv2, 5, 19, [1000, 50, 12000], [0.001, .
 err100, Z100 = soc_range(mbpf100kpa, Q100, ocv2, 5, 19, [1000, 50, 12000], [0.001, .0005, 0.010], [0.9, .1, 0.9]);
 
 # soc_v = 0.5
-# d25 = hppc_fun(mbpf25kpa, soc_v*100, 10, 1, 17, 19, 1);
+# d25 = hppc_fun(mbpf25kpa, soc_v*100, 10, 17, 1);
 # v25_2 = ecm_discrete([err25[5, :R1], err25[5, :C1], err25[5, :R0]], 1, d25."Current(A)", d25."Test_Time(s)", 0.999, 3.7, ocv1, soc_v)
 
-# d40 = hppc_fun(mbpf40kpa, soc_v*100, 10, 1, 20, 22, 1);
+# d40 = hppc_fun(mbpf40kpa, soc_v*100, 10, 20, 1);
 # v40 = ecm_discrete([err40[5, :R1], err40[5, :C1], err40[5, :R0]], 1, d40."Current(A)", d40."Test_Time(s)", 0.999, 3.7, ocv1, soc_v)
 
-# d130 = hppc_fun(mbpf130kpa, soc_v*100, 10, 1, 20, 22, 1);
+# d130 = hppc_fun(mbpf130kpa, soc_v*100, 10, 20,1);
 # v130 = ecm_discrete([err130[5, :R1], err130[5, :C1], err130[5, :R0]], 1, d130."Current(A)", d130."Test_Time(s)", 0.999, 3.7, ocv1, soc_v)
 
 # t1 = scatter(x = d0."Test_Time(s)", y = d0."Voltage(V)", mode="lines")
 # t2 = scatter(x = d0[1:end-1,"Test_Time(s)"], y = v0, mode="lines")
 # plot([t1,t2])
 
-# d0 = hppc_fun(mbpf0kpa, soc_v*100, 5, 1, 19, 21, 1);
+# d0 = hppc_fun(mbpf0kpa, soc_v*100, 5, 19, 1);
 # v0 = ecm_discrete([err0[5, :R1], err0[5, :C1], err0[5, :R0]], 1, d0."Current(A)", d0."Test_Time(s)", 0.999, 5.5, ocv2, soc_v)
 
 min40 = rmins(Z40[0.9])
