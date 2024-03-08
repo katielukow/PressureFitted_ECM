@@ -23,30 +23,13 @@ mbpf100kpa.Date_Time .= replace.(mbpf100kpa.Date_Time, "\t" => "")
 
 print("Data import complete")
 
-err25, Z25 = soc_range(mbpf25kpa, Q25, ocv1, 10, 17, [500, 100, 8000], [0.001, .001, 0.020], [0.9, .1, 0.9]);
-err40, Z40  = soc_range(mbpf40kpa, Q40, ocv1, 10, 20, [500, 100, 8000], [0.001, .001, 0.020], [0.9, .1, 0.9]);
-err130, Z130 = soc_range(mbpf130kpa, Q130, ocv1, 10, 20, [500, 100, 10000], [0.001, .001, 0.020], [0.9, .1, 0.9]);
+err25, Z25 = soc_range(mbpf25kpa, Q25, ocv1, 10, 17, [500, 100, 8000], [0.001, .001, 0.020], [0.1, .1, 0.9]);
+err40, Z40  = soc_range(mbpf40kpa, Q40, ocv1, 10, 20, [500, 100, 8000], [0.001, .001, 0.020], [0.1, .1, 0.9]);
+err130, Z130 = soc_range(mbpf130kpa, Q130, ocv1, 10, 20, [500, 100, 10000], [0.001, .001, 0.020], [0.1, .1, 0.9]);
 
-err0, Z0 = soc_range(P0kpa, Q0, ocv2, 5, 19, [1000, 50, 12000], [0.001, .0005, 0.010], [0.9, .1, 0.9]);
-err50, Z50 = soc_range(mbpf50kpa, Q50, ocv2, 5, 19, [1000, 50, 12000], [0.001, .0005, 0.010], [0.9, .1, 0.9]);
-err100, Z100 = soc_range(mbpf100kpa, Q100, ocv2, 5, 19, [1000, 50, 12000], [0.001, .0005, 0.010], [0.9, .1, 0.9]);
-
-# soc_v = 0.5
-# d25 = hppc_fun(mbpf25kpa, soc_v*100, 10, 17, 1);
-# v25_2 = ecm_discrete([err25[5, :R1], err25[5, :C1], err25[5, :R0]], 1, d25."Current(A)", d25."Test_Time(s)", 0.999, 3.7, ocv1, soc_v)
-
-# d40 = hppc_fun(mbpf40kpa, soc_v*100, 10, 20, 1);
-# v40 = ecm_discrete([err40[5, :R1], err40[5, :C1], err40[5, :R0]], 1, d40."Current(A)", d40."Test_Time(s)", 0.999, 3.7, ocv1, soc_v)
-
-# d130 = hppc_fun(mbpf130kpa, soc_v*100, 10, 20,1);
-# v130 = ecm_discrete([err130[5, :R1], err130[5, :C1], err130[5, :R0]], 1, d130."Current(A)", d130."Test_Time(s)", 0.999, 3.7, ocv1, soc_v)
-
-# t1 = scatter(x = d0."Test_Time(s)", y = d0."Voltage(V)", mode="lines")
-# t2 = scatter(x = d0[1:end-1,"Test_Time(s)"], y = v0, mode="lines")
-# plot([t1,t2])
-
-# d0 = hppc_fun(mbpf0kpa, soc_v*100, 5, 19, 1);
-# v0 = ecm_discrete([err0[5, :R1], err0[5, :C1], err0[5, :R0]], 1, d0."Current(A)", d0."Test_Time(s)", 0.999, 5.5, ocv2, soc_v)
+err0, Z0 = soc_range(P0kpa, Q0, ocv2, 5, 19, [1000, 50, 12000], [0.001, .0005, 0.010], [0.1, .1, 0.9]);
+err50, Z50 = soc_range(mbpf50kpa, Q50, ocv2, 5, 19, [1000, 50, 12000], [0.001, .0005, 0.010], [0.1, .1, 0.9]);
+err100, Z100 = soc_range(mbpf100kpa, Q100, ocv2, 5, 19, [1000, 50, 12000], [0.001, .0005, 0.010], [0.1, .1, 0.9]);
 
 min40 = rmins(Z40[0.9])
 min25 = rmins(Z25[0.9])
@@ -66,9 +49,9 @@ p50 = pres_contour(Z50[0.9], min50, "50 kPa")
 p100 = pres_contour(Z100[0.9],min100,"100 kPa")
 p = [p0 p50 p100]
 
-p130_1 = pres_contour(Z130[0.5],min130,"R0 = 0.0087, Err = 0.040 V")
-p130_2 = pres_contour(Z130[0.5],min130[2:end,:],"R0 = 0.0077, Err = 0.154 V")
-p130_3 = pres_contour(Z130[0.5],min130[3:end,:],"R0 = 0.0097, Err = 0.200 V")
+p130_1 = pres_contour(Z130[0.9],min130,"R0 = 0.0087, Err = 0.040 V")
+p130_2 = pres_contour(Z130[0.9],min130[2:end,:],"R0 = 0.0077, Err = 0.154 V")
+p130_3 = pres_contour(Z130[0.9],min130[3:end,:],"R0 = 0.0097, Err = 0.200 V")
 
 p = [p130_1 p130_2 p130_3]
 # relayout!(p, titlefont_size=20, font_size=18, width=1000, height=1000, margin_l=100, margin_r=100, margin_t=100, margin_b=100, showlegend=false)
@@ -82,3 +65,33 @@ p = [p130_1 p130_2 p130_3]
 # contour plot at 90% SOC for three r0 values of the lowest error for model (1), single pressure
 
 # contour plot at 20% SOC for three r0 values of the lowest error for model (1), single pressure
+
+# need to put into for loop with save fig, adjust contour start and end to be relevant to the data
+
+for j in Z130.keys
+    print(j)
+    t1 = contour(z=Z130[j][i][2:13, 3:end], x=Z130[j][i][1, 2:13], y=Z130[j][i][3:end,1], contours_start =0,contours_end=2, colorbar_title="Error", showscale=true)
+    # t2 = scatter(x=[min[1,:C1]],y=[min[1,:R1]], mode="markers", showlegend = false)
+    # layout1 = Layout(title="Test")
+    # p = plot(t1, layout1)
+    # savefig(p, "contour_plots"*string(j)*".pdf")
+end
+
+function prescontour_loop(dict, pressure)
+    k = 1
+    for j in dict.keys
+        for i in dict[j].keys
+            t1 = contour(z=dict[j][i][2:13, 3:end], x=dict[j][i][1, 2:13], y=dict[j][i][3:end,1], 
+            # contours_start =0,contours_end=2, 
+            colorbar_title="Error", showscale=true)
+            layout = Layout(title="Pressure = "*string(pressure)*"kPa, R0 = "*string(i)*", SoC = "*string(j))
+            p = plot(t1, layout)
+            savefig(p, "figures/contour_plots_"*string(pressure)*"kpa_"*string(ceil(Int,j*100))*"_"*string(k)*".pdf")
+            k+=1
+        end
+    end
+end
+
+
+
+

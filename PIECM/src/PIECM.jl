@@ -7,7 +7,7 @@ using DataStructures: OrderedDict
 using Distributions: Normal, rand
  
 export data_import_csv, data_import_excel, pressure_dateformat_fix, pressurematch, hppc_pulse, pocv, sqrzeros, HPPC, hppc_fun, hppc_calc, ecm_err_range,rmins, pres_contour, soc_loop_2RC
-export ecm_discrete, costfunction, HPPC_n, data_imp, pres_avg, Capacity_Fade, ecm_fit, soc_loop, incorrect_pres, soc_range, soc_range_2RC, ecm_err_range_2RC
+export ecm_discrete, costfunction, HPPC_n, data_imp, pres_avg, Capacity_Fade, ecm_fit, soc_loop, incorrect_pres, soc_range, soc_range_2RC, ecm_err_range_2RC, pres_contour_2RC
 
 # --------------- Fitting data import and filtering -----------------------------
 
@@ -441,6 +441,43 @@ function pres_contour(dict, min, title)
 
 end
 
+function pres_contour_2RC(data,title)
+    df_all = DataFrame(R0 = data[:, 1],
+    R1 = data[:, 2],
+    R2 = data[:, 3],
+    C1 = data[:, 4],
+    C2 = data[:, 5],
+    Error = data[:, 6])
+    min = findmin(df_all[:,:Error])
+    R_fil = df_all[min[2], :R0]
+    df = filter(row -> row.R0 == R_fil, df_all)
+
+    err_temp = findmin(df[:,:Error])
+    df_fil = filter(row -> row.C1 == df[err_temp[2], :C1] && row.C2 == df[err_temp[2], :C2], df)
+
+    r1values = unique(df_fil[:,:R1])
+    r2values = unique(df_fil[:,:R2])
+
+    mat = zeros(length(r1values), length(r2values))
+    for i in 1:length(r1values)
+        for j in 1:length(r2values)
+            df_temp = filter(row -> row.R1 == r1values[i] && row.R2 == r2values[j], df_fil)
+            if length(df_temp[:,:Error]) > 0
+                mat[i,j] = df_temp[1,:Error]
+            else
+                mat[i,j] = NaN
+            end 
+        end
+    end
+
+    t1 = contour(z=mat, x = r1values, y = r2values, contours_start =0,contours_end=2, colorbar_title="Error", showscale=true)
+    # t2 = scatter(x=[],y=[min[1,:R1]], mode="markers", showlegend = false)
+	layout1 = Layout(title=title)
+	
+	return plot([t1], layout1)
+
+end
+
 function soc_range(df, Q, ocv, soc_increment, d_step, r1_range, c1_range, soc_range)
 
 	srng = soc_range[1]:soc_range[2]:soc_range[3]
@@ -481,8 +518,8 @@ function ecm_err_range_2RC(data, Q, ocv, soc, soc_increment, dstep, C_range, R_r
 	results = Array{Float64}(undef,sum(1:length(R_range))*sum(1:length(C_range))*length(zrng_array), 6)
 
     z = 1
-    for (k,r0) in zrng_array
-        print(k, "\n")
+    for (_,r0) in zrng_array
+        # print(k, "\n")
         for i in eachindex(R_range)
             for j in i:length(R_range)
                 for m in eachindex(C_range)

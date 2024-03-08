@@ -1,6 +1,6 @@
-using PIECM, Plots, Statistics, PGFPlotsX, LaTeXStrings
+using PIECM, Statistics, PGFPlotsX, LaTeXStrings, Colors
 
-plotly()
+# plotly()
 Ϟ = distinguishable_colors(10)
 
 # --------------- Data Import ------------------------------
@@ -34,32 +34,32 @@ Pres200 = pressure_dateformat_fix("data/PressureData/230321_PressureTest_11_0044
 P200kpa = pressurematch(mbpf200kpa, Pres200, A_cell)
 p200_discharge = sort!(filter(row -> row.Step_Index == 6, P200kpa), [:Date_Time])
 
-Pres40 = pressure_dateformat_fix("data/PressureData/230321_PressureTest_11_0048.csv")
-P40kpa = pressurematch(mbpf40kpa, Pres40, A_cell)
-p40_discharge = sort!(filter(row -> row.Step_Index == 6, P40kpa), [:Date_Time])
+Pres140 = pressure_dateformat_fix("data/PressureData/230320_MBPF_Investigation_11_0043_25kpa.csv")
+P140kpa = pressurematch(mbpf140kpa, Pres140, A_cell)
+p140_discharge = sort!(filter(row -> row.Step_Index == 6, P140kpa), [:Date_Time])
 
-plot(p40_discharge[:,"Date_Time"], p40_discharge[:,"Pressure"])
-plot(p200_discharge[:,"Date_Time"], p200_discharge[:,"Pressure"])
+# plot(p40_discharge[:,"Date_Time"], p40_discharge[:,"Pressure"])
+# plot(p200_discharge[:,"Date_Time"], p200_discharge[:,"Pressure"])
 
-k=1
-p40_plot = Array{Float64}(undef, 10, 2)
-p_temp = filter(row -> row.Cycle_Index == 1, P40kpa)
-for i in 0:9
-    p = filter(row -> row.Step_Index == 25 && row.TC_Counter1 == i, p_temp)
-    p40_plot[k,1] = mean(skipmissing(p[:,"Pressure"]))/1000
-    p40_plot[k,2] = 100 - (i+1) * 5
-    k += 1
+function presplot(data, step)
+    k = 1
+    p_pres = Array{Float64}(undef, 10, 2)
+    p_temp = filter(row -> row.Cycle_Index == 1, data)
+    for i in 0:9
+        p = filter(row -> row.Step_Index == step && row.TC_Counter1 == i, p_temp)
+        p_pres[k,1] = mean(skipmissing(p[:,"Pressure"]))/1000
+        p_pres[k,2] = 100 - (i+1) * 10
+        k += 1
+    end
+
+    return p_pres
 end
 
-k=1
-p200_plot = Array{Float64}(undef, 10, 2)
-p_temp = filter(row -> row.Cycle_Index == 1, P200kpa)
-for i in 0:9
-    p = filter(row -> row.Step_Index == 25 && row.TC_Counter1 == i, p_temp)
-    p200_plot[k,1] = mean(skipmissing(p[:,"Pressure"]))/1000
-    p200_plot[k,2] = 100 - (i+1) * 10
-    k += 1
-end
+p40 = presplot(P40kpa, 26)
+p200 = presplot(P200kpa, 26)
+p140 = presplot(P140kpa, 23)
+
+
 
 
 dig=0
@@ -90,20 +90,20 @@ ocv = pocv("data/OCV/220310_BTC_POCV_GITT_Mel_SLPB7336128HV_1_25C_Channel_5_Wb_1
 
 
 # ---------------- Pressure Plotting --------------------------------------
-P25kpa = data_imp("data/HPPC/230320_MBPF_Investigation_25kpa_11_0043_Channel_6_Wb_1.csv","data/PressureData/230320_MBPF_Investigation_11_0043_25kpa.csv", celldim)
-P40kpa = data_imp("data/HPPC/230320_MBPF_Investigation_40kpa_11_0048_Channel_6_Wb_1.csv", "data/PressureData/230321_PressureTest_11_0048.csv", celldim)
-P130kpa = data_imp("data/HPPC/230320_MBPF_Investigation_130kpa_11_0044_Channel_5_Wb_1.csv","data/PressureData/230321_PressureTest_11_0044.csv",celldim)
+# P25kpa = data_imp("data/HPPC/230320_MBPF_Investigation_25kpa_11_0043_Channel_6_Wb_1.csv","data/PressureData/230320_MBPF_Investigation_11_0043_25kpa.csv", celldim)
+# P40kpa = data_imp("data/HPPC/230320_MBPF_Investigation_40kpa_11_0048_Channel_6_Wb_1.csv", "data/PressureData/230321_PressureTest_11_0048.csv", celldim)
+# P130kpa = data_imp("data/HPPC/230320_MBPF_Investigation_130kpa_11_0044_Channel_5_Wb_1.csv","data/PressureData/230321_PressureTest_11_0044.csv",celldim)
 
-p_plot = Array{Float64}(undef, 10)
-k = 1
-for i in 10:10:100
-    println(i)
-    p = hppc_fun(P130kpa, i, 10, 1, 17, 19, 1)
-    p_plot[k] = mean(skipmissing(p[:,"Pressure"]))
-    k += 1
-end
+# p_plot = Array{Float64}(undef, 10)
+# k = 1
+# for i in 10:10:100
+#     println(i)
+#     p = hppc_fun(P130kpa, i, 10, 1, 17, 19, 1)
+#     p_plot[k] = mean(skipmissing(p[:,"Pressure"]))
+#     k += 1
+# end
 
-plot(p_plot)
+# plot(p_plot)
 
 # P25kpa = pressure_dateformat_fix("data/PressureData/230320_MBPF_Investigation_11_0043_25kpa.csv")
 # P40kpa = pressure_dateformat_fix("data/PressureData/230321_PressureTest_11_0048.csv")
@@ -112,9 +112,9 @@ plot(p_plot)
 char_step = 10
 dis_step = 6
 
-P25kpa_charge = sort!(filter(row -> row.Step_Index == dis_step, P25kpa)) 
+P200kpa_charge = sort!(filter(row -> row.Step_Index == dis_step, P200kpa)) 
 P40kpa_charge = sort!(filter(row -> row.Step_Index == dis_step, P40kpa)) 
-P130kpa_charge = sort!(filter(row -> row.Step_Index == dis_step, P130kpa)) 
+P140kpa_charge = sort!(filter(row -> row.Step_Index == dis_step, P140kpa)) 
 
 P25kpa_norm = P25kpa_charge[:,"Pressure"] ./ P25kpa_charge[1,"Pressure"]
 P40kpa_norm = P40kpa_charge[:,"Pressure"] ./ P40kpa_charge[3,"Pressure"]
@@ -126,11 +126,11 @@ P130kpa_norm2 = P130kpa_charge[:,"Pressure"] .- P130kpa_charge[1,"Pressure"]
 
 
 # ------------------Plots------------------------
-scatter(P40kpa_charge[:,:Pressure], label = string(P_25kpa))
-scatter!(P25kpa_charge[:,:Pressure], label = string(P_40kpa))
-scatter!(P130kpa_charge[:,:Pressure], label = string(P_130kpa))
+# scatter(P40kpa_charge[:,:Pressure], label = string(P_25kpa))
+# scatter!(P25kpa_charge[:,:Pressure], label = string(P_40kpa))
+# scatter!(P130kpa_charge[:,:Pressure], label = string(P_130kpa))
 
-scatter!(twinx(), P130kpa_charge[:,"Voltage(V)"])
+# scatter!(twinx(), P130kpa_charge[:,"Voltage(V)"])
 
 
 Ω_plot = @pgf Axis(
@@ -247,9 +247,9 @@ P_plot = @pgf GroupPlot(
 
     Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = P40kpa_charge[:,"Step_Time(s)"], y = P40kpa_charge[:,:Pressure]/1000)),
     LegendEntry("47 kPa"),
-    Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = P25kpa_charge[:,"Step_Time(s)"], y = P25kpa_charge[:,:Pressure]/1000)),
+    Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = P200kpa_charge[:,"Step_Time(s)"], y = P200kpa_charge[:,:Pressure]/1000)),
     LegendEntry("139 kPa"),
-    Plot({color = Ϟ[7], "thick", only_marks}, Table({x = "x", y = "y"}, x = P130kpa_charge[:,"Step_Time(s)"], y = P130kpa_charge[:,:Pressure]/1000)),
+    Plot({color = Ϟ[7], "thick", only_marks}, Table({x = "x", y = "y"}, x = P140kpa_charge[:,"Step_Time(s)"], y = P140kpa_charge[:,:Pressure]/1000)),
     LegendEntry("211 kPa"),
 
 )
@@ -451,3 +451,23 @@ ocv_plot = @pgf GroupPlot(
 
 )
 
+PHPPC_plot = @pgf Axis(
+    {
+        height = "7cm", width = "14cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Pressure [kPa]",
+        xmin = 0, 
+        ymin = -5,
+        legend_pos= "north west"
+    },
+
+    Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = p40[:,2], y = p40[:,1])),
+    LegendEntry("40 kPa"),
+    Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = p140[:,2], y = p140[:,1])),
+    LegendEntry("140 kPa"),
+    Plot({color = Ϟ[7], "thick", only_marks}, Table({x = "x", y = "y"}, x = p200[:,2], y = p200[:,1])),
+    LegendEntry("200 kPa"),
+
+)
+pgfsave("figures/PHPPC_plot_mod1.pdf",
+PHPPC_plot)
