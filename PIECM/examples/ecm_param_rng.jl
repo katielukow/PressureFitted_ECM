@@ -54,7 +54,7 @@ p130_2 = pres_contour(Z130[0.9],min130[2:end,:],"R0 = 0.0077, Err = 0.154 V")
 p130_3 = pres_contour(Z130[0.9],min130[3:end,:],"R0 = 0.0097, Err = 0.200 V")
 
 p = [p130_1 p130_2 p130_3]
-# relayout!(p, titlefont_size=20, font_size=18, width=1000, height=1000, margin_l=100, margin_r=100, margin_t=100, margin_b=100, showlegend=false)
+relayout!(p, titlefont_size=20, font_size=18, width=1000, height=1000, margin_l=100, margin_r=100, margin_t=100, margin_b=100, showlegend=false)
 
 # savefig(p, "contour_plots_20.pdf")
 
@@ -68,29 +68,8 @@ p = [p130_1 p130_2 p130_3]
 
 # need to put into for loop with save fig, adjust contour start and end to be relevant to the data
 
-for j in Z130.keys
-    print(j)
-    t1 = contour(z=Z130[j][i][2:13, 3:end], x=Z130[j][i][1, 2:13], y=Z130[j][i][3:end,1], contours_start =0,contours_end=2, colorbar_title="Error", showscale=true)
-    # t2 = scatter(x=[min[1,:C1]],y=[min[1,:R1]], mode="markers", showlegend = false)
-    # layout1 = Layout(title="Test")
-    # p = plot(t1, layout1)
-    # savefig(p, "contour_plots"*string(j)*".pdf")
-end
 
-function prescontour_loop(dict, pressure)
-    k = 1
-    for j in dict.keys
-        for i in dict[j].keys
-            t1 = contour(z=dict[j][i][2:13, 3:end], x=dict[j][i][1, 2:13], y=dict[j][i][3:end,1], 
-            # contours_start =0,contours_end=2, 
-            colorbar_title="Error", showscale=true)
-            layout = Layout(title="Pressure = "*string(pressure)*"kPa, R0 = "*string(i)*", SoC = "*string(j))
-            p = plot(t1, layout)
-            savefig(p, "figures/contour_plots_"*string(pressure)*"kpa_"*string(ceil(Int,j*100))*"_"*string(k)*".pdf")
-            k+=1
-        end
-    end
-end
+
 
 
 
