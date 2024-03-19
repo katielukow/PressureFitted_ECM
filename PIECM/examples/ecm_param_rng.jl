@@ -35,7 +35,12 @@ min40 = rmins(Z40[0.9])
 min25 = rmins(Z25[0.9])
 min130 = rmins(Z130[0.9])
 
+for i in Z40.keys
+    title = "Cell Model (2), 40 kPa, " * string(i*100) * "% SOC"
+    p = pres_contour(Z40[i], rmins(z40[i]), title)
+end
 p40 = pres_contour(Z40[0.9], min40, "40 kPa")
+relayout!(p40, titlefont_size=20, font_size=18, width=200, height=1000, margin_l=100, margin_r=100, margin_t=100, margin_b=100, showlegend=false)
 p25 = pres_contour(Z25[0.9], min25, "135 kPa")
 p130 = pres_contour(Z130[0.9],min130,"210 kPa")
 p = [p40 p25 p130]

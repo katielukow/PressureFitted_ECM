@@ -1,4 +1,4 @@
-using PIECM, Statistics, StatsBase, DataStructures, DataFrames, PGFPlotsX, JLD2, BenchmarkTools
+using PIECM, PGFPlotsX
 
 
 # Data Import
@@ -20,36 +20,406 @@ ocv2 = pocv("data/OCV/230621_MBPF_PCharact_POCV_Mel_SLPBA442124_0kpa_25C_Channel
 
 
 # # ECM param fitting
-v40, x40, error_40 =  soc_loop(mbpf40kpa, 1.0, 0.2, Q40, ocv1, 20, 22, 10);
-v25, x25, error_25 = soc_loop(mbpf25kpa, 1, 0.2, Q25, ocv1,  17, 19, 10);
-v130, x130, error_130 = soc_loop(mbpf130kpa, 1, 0.2, Q130, ocv1, 20, 22, 10);
+v40, x40, error_40 =  soc_loop(mbpf40kpa, 1.0, 0.1, Q40, ocv1, 20, 22, 10);
+v25, x25, error_25 = soc_loop(mbpf25kpa, 1, 0.1, Q25, ocv1,  17, 19, 10);
+v130, x130, error_130 = soc_loop(mbpf130kpa, 1, 0.1, Q130, ocv1, 20, 22, 10);
 
-v0, x0, error_0 = soc_loop(P0kpa, 1, 0.2, Q0, ocv2, 19, 21, 5);
-v50, x50, error_50 = soc_loop(mbpf50kpa, 1, 0.2, Q50, ocv2, 19, 21, 5);
-v100, x100, error_100 = soc_loop(mbpf100kpa, 1, 0.2, Q100, ocv2, 19, 21, 5);
+v0, x0, error_0 = soc_loop(P0kpa, 1, 0.1, Q0, ocv2, 19, 21, 5);
+v50, x50, error_50 = soc_loop(mbpf50kpa, 1, 0.1, Q50, ocv2, 19, 21, 5);
+v100, x100, error_100 = soc_loop(mbpf100kpa, 1, 0.1, Q100, ocv2, 19, 21, 5);
 
 # # # ECM param fitting 2RC
-v40_2RC, x40_2RC, error_40_2RC = soc_loop_2RC(mbpf40kpa, 1, 0.2, Q40, ocv1, 20, 22, 10);
-v25_2RC, x25_2RC, error_25_2RC = soc_loop_2RC(mbpf25kpa, 1, 0.2, Q25, ocv1, 17, 19, 10);
-v130_2RC, x130_2RC, error_130_2RC = soc_loop_2RC(mbpf130kpa, 1, 0.2, Q130, ocv1, 20, 22, 10);
+v40_2RC, x40_2RC, error_40_2RC = soc_loop_2RC(mbpf40kpa, 1, 0.1, Q40, ocv1, 20, 22, 10);
+v25_2RC, x25_2RC, error_25_2RC = soc_loop_2RC(mbpf25kpa, 1, 0.1, Q25, ocv1, 17, 19, 10);
+v130_2RC, x130_2RC, error_130_2RC = soc_loop_2RC(mbpf130kpa, 1, 0.1, Q130, ocv1, 20, 22, 10);
 
-v0_2RC, x0_2RC, error_0_2RC = soc_loop_2RC(P0kpa, 1, 0.2, Q0, ocv2, 19, 21, 5);
-v50_2RC, x50_2RC, error_50_2RC = soc_loop_2RC(mbpf50kpa, 1, 0.2, Q50, ocv2, 19, 21, 5);
-v100_2RC, x100_2RC, error_100_2RC = soc_loop_2RC(mbpf100kpa, 1.0, 0.2, Q100, ocv2, 19, 21, 5);
+v0_2RC, x0_2RC, error_0_2RC = soc_loop_2RC(P0kpa, 1, 0.1, Q0, ocv2, 19, 21, 5);
+v50_2RC, x50_2RC, error_50_2RC = soc_loop_2RC(mbpf50kpa, 1, 0.1, Q50, ocv2, 19, 21, 5);
+v100_2RC, x100_2RC, error_100_2RC = soc_loop_2RC(mbpf100kpa, 1.0, 0.1, Q100, ocv2, 19, 21, 5);
 
 
-p1 = scatter(x = x40[1:end-1,"SOC"], y = x40[1:end-1,"Error"], mode="lines", name="40 kPa")
-p2 = scatter(x = x40_2RC[1:end-1,"SOC"], y = x40_2RC[1:end-1,"Error"], mode="lines", name="40 2RC kPa")
-p3 = scatter(x = x25[1:end-1,"SOC"], y = x25[1:end-1,"Error"], mode="lines", name="25 kPa")
-p4 = scatter(x = x25_2RC[1:end-1,"SOC"], y = x25_2RC[1:end-1,"Error"], mode="lines", name="25 2RC kPa")
-p5 = scatter(x = x130[1:end-1,"SOC"], y = x130[1:end-1,"Error"], mode="lines", name="130 kPa")
-p6 = scatter(x = x130_2RC[1:end-1,"SOC"], y = x130_2RC[1:end-1,"Error"], mode="lines", name="130 2RC kPa")
-plot([p1,p2,p3,p4,p5,p6])
+R0_1_plot = @pgf Axis(
+    {
+        height = "7cm", width = "15cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Parameter R0",
+        xmin = 0, 
+        xmax = 101,
+        xtick = 0:10:100,
+        legend_pos= "south west",
+        font = raw"\Large",
+    },
+ 
+    Plot({color = Ϟ[7], "thick", mark="square*"}, Table({x = "x", y = "y"}, x = x0.SOC .* 100, y = x0.R0)),
+    LegendEntry("0 kPa"),
+    Plot({color = Ϟ[5], "thick", mark="*"}, Table({x = "x", y = "y"}, x = x50.SOC .* 100, y = x50.R0)),
+    LegendEntry("50 kPa"),
+    Plot({color = Ϟ[6], "thick", mark="triangle*"}, Table({x = "x", y = "y"}, x = x100.SOC .* 100, y = x100.R0)),
+    LegendEntry("100 kPa"),
 
-p7 = scatter(x = x0[:,"SOC"], y = x0[:,"Error"], mode="lines", name="0 kPa")
-p8 = scatter(x = x0_2RC[:,"SOC"], y = x0_2RC[:,"Error"], mode="lines", name="0 2RC kPa")
-p9 = scatter(x = x50[:,"SOC"], y = x50[:,"Error"], mode="lines", name="50 kPa")
-p10 = scatter(x = x50_2RC[:,"SOC"], y = x50_2RC[:,"Error"], mode="lines", name="50 2RC kPa")
-p11 = scatter(x = x100[:,"SOC"], y = x100[:,"Error"], mode="lines", name="100 kPa")
-p12 = scatter(x = x100_2RC[:,"SOC"], y = x100_2RC[:,"Error"], mode="lines", name="100 2RC kPa")
-# plot([p7,p8,p9,p10,p11,p12])
+)
+
+R1_1_plot = @pgf Axis(
+    {
+        height = "7cm", width = "15cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Parameter R1",
+        xmin = 0, 
+        xmax = 101,
+        # ymax = 15,
+        # ymin = 10,
+        xtick = 0:10:100,
+        legend_pos= "north west",
+        font = raw"\Large",
+    },
+
+    Plot({color = Ϟ[7], "thick", mark="square*"}, Table({x = "x", y = "y"}, x = x0.SOC .* 100, y = x0.R1)),
+    LegendEntry("0 kPa"),
+    Plot({color = Ϟ[5], "thick", mark="*"}, Table({x = "x", y = "y"}, x = x50.SOC .* 100, y = x50.R1)),
+    LegendEntry("50 kPa"),
+    Plot({color = Ϟ[6], "thick", mark="triangle*"}, Table({x = "x", y = "y"}, x = x100.SOC .* 100, y = x100.R1)),
+    LegendEntry("100 kPa"),
+
+)
+
+C1_1_plot = @pgf Axis(
+    {
+        height = "7cm", width = "15cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Parameter C1",
+        xmin = 0, 
+        xmax = 101,
+        # ymax = 15,
+        # ymin = 10,
+        xtick = 0:10:100,
+        legend_pos= "north west", 
+        font = raw"\Large",
+    },
+
+    Plot({color = Ϟ[7], "thick", mark="square*"}, Table({x = "x", y = "y"}, x = x0.SOC .* 100, y = x0.C1)),
+    LegendEntry("0 kPa"),
+    Plot({color = Ϟ[5], "thick", mark="*"}, Table({x = "x", y = "y"}, x = x50.SOC .* 100, y = x50.C1)),
+    LegendEntry("50 kPa"),
+    Plot({color = Ϟ[6], "thick", mark="triangle*"}, Table({x = "x", y = "y"}, x = x100.SOC .* 100, y = x100.C1)),
+    LegendEntry("100 kPa"),
+
+)
+
+pgfsave("R0_1_plot.pdf", R0_1_plot)
+pgfsave("R1_1_plot.pdf", R1_1_plot)
+pgfsave("C1_1_plot.pdf", C1_1_plot)
+
+R0_2_plot = @pgf Axis(
+    {
+        height = "7cm", width = "15cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Parameter R0",
+        xmin = 0, 
+        xmax = 101,
+        # ymax = 15,
+        # ymin = 10,
+        xtick = 0:10:100,
+        legend_pos= "north west", 
+        font = raw"\Large",
+    },
+
+    Plot({color = Ϟ[8], "thick", mark="square*"}, Table({x = "x", y = "y"}, x = x40.SOC .* 100, y = x40.R0)),
+    LegendEntry("47 kPa"),
+    Plot({color = Ϟ[10], "thick", mark="*"}, Table({x = "x", y = "y"}, x = x25.SOC .* 100, y = x25.R0)),
+    LegendEntry("140 kPa"),
+    Plot({color = Ϟ[14], "thick", mark="triangle*"}, Table({x = "x", y = "y"}, x = x130.SOC .* 100, y = x130.R0)),
+    LegendEntry("210 kPa"),
+
+)
+
+R1_2_plot = @pgf Axis(
+    {
+        height = "7cm", width = "15cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Parameter R1",
+        xmin = 0, 
+        xmax = 101,
+        # ymax = 15,
+        # ymin = 10,
+        xtick = 0:10:100,
+        legend_pos= "north west", 
+        font = raw"\Large",
+    },
+
+    Plot({color = Ϟ[8], "thick", mark="square*"}, Table({x = "x", y = "y"}, x = x40.SOC .* 100, y = x40.R1)),
+    LegendEntry("47 kPa"),
+    Plot({color = Ϟ[10], "thick", mark="*"}, Table({x = "x", y = "y"}, x = x25.SOC .* 100, y = x25.R1)),
+    LegendEntry("140 kPa"),
+    Plot({color = Ϟ[14], "thick", mark="triangle*"}, Table({x = "x", y = "y"}, x = x130.SOC .* 100, y = x130.R1)),
+    LegendEntry("210 kPa"),
+
+)
+
+C1_2_plot = @pgf Axis(
+    {
+        height = "7cm", width = "15cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Parameter C1",
+        xmin = 0, 
+        xmax = 101,
+        # ymax = 15,
+        # ymin = 10,
+        xtick = 0:10:100,
+        legend_pos= "north west", 
+        font = raw"\Large",
+    },
+
+    Plot({color = Ϟ[8], "thick", mark="square*"}, Table({x = "x", y = "y"}, x = x40.SOC .* 100, y = x40.C1)),
+    LegendEntry("47 kPa"),
+    Plot({color = Ϟ[10], "thick", mark="*"}, Table({x = "x", y = "y"}, x = x25.SOC .* 100, y = x25.C1)),
+    LegendEntry("140 kPa"),
+    Plot({color = Ϟ[14], "thick", mark="triangle*"}, Table({x = "x", y = "y"}, x = x130.SOC .* 100, y = x130.C1)),
+    LegendEntry("210 kPa"),
+
+)
+
+pgfsave("R0_2_plot.pdf", R0_2_plot)
+pgfsave("R1_2_plot.pdf", R1_2_plot)
+pgfsave("C1_2_plot.pdf", C1_2_plot)
+
+
+R0_2_2_plot = @pgf Axis(
+    {
+        height = "7cm", width = "15cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Parameter R0",
+        xmin = 0, 
+        xmax = 101,
+        ymax = .013,
+        xtick = 0:10:100,
+        legend_pos= "north west", 
+        font = raw"\Large",
+    },
+
+    Plot({color = Ϟ[8], "thick", mark="square*"}, Table({x = "x", y = "y"}, x = x40_2RC.SOC .* 100, y = x40_2RC.R0)),
+    LegendEntry("47 kPa"),
+    Plot({color = Ϟ[10], "thick", mark="*"}, Table({x = "x", y = "y"}, x = x25_2RC.SOC .* 100, y = x25_2RC.R0)),
+    LegendEntry("140 kPa"),
+    Plot({color = Ϟ[14], "thick", mark="triangle*"}, Table({x = "x", y = "y"}, x = x130_2RC.SOC .* 100, y = x130_2RC.R0)),
+    LegendEntry("210 kPa"),
+
+)
+
+R1_2_2_plot = @pgf Axis(
+    {
+        height = "7cm", width = "15cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Parameter R1",
+        xmin = 0, 
+        xmax = 101,
+        # ymax = 15,
+        # ymin = 10,
+        xtick = 0:10:100,
+        legend_pos= "north west", 
+        font = raw"\Large",
+    },
+
+    Plot({color = Ϟ[8], "thick", mark="square*"}, Table({x = "x", y = "y"}, x = x40_2RC.SOC .* 100, y = x40_2RC.R1)),
+    LegendEntry("47 kPa"),
+    Plot({color = Ϟ[10], "thick", mark="*"}, Table({x = "x", y = "y"}, x = x25_2RC.SOC .* 100, y = x25_2RC.R1)),
+    LegendEntry("140 kPa"),
+    Plot({color = Ϟ[14], "thick", mark="triangle*"}, Table({x = "x", y = "y"}, x = x130_2RC.SOC .* 100, y = x130_2RC.R1)),
+    LegendEntry("210 kPa"),
+
+)
+
+C1_2_2_plot = @pgf Axis(
+    {
+        height = "7cm", width = "15cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Parameter C1",
+        xmin = 0, 
+        xmax = 101,
+        # ymax = 15,
+        # ymin = 10,
+        xtick = 0:10:100,
+        legend_pos= "north west", 
+        font = raw"\Large",
+    },
+
+    Plot({color = Ϟ[8], "thick", mark="square*"}, Table({x = "x", y = "y"}, x = x40_2RC.SOC .* 100, y = x40_2RC.C1)),
+    LegendEntry("47 kPa"),
+    Plot({color = Ϟ[10], "thick", mark="*"}, Table({x = "x", y = "y"}, x = x25_2RC.SOC .* 100, y = x25_2RC.C1)),
+    LegendEntry("140 kPa"),
+    Plot({color = Ϟ[14], "thick", mark="triangle*"}, Table({x = "x", y = "y"}, x = x130_2RC.SOC .* 100, y = x130_2RC.C1)),
+    LegendEntry("210 kPa"),
+
+)
+
+R2_2_2_plot = @pgf Axis(
+    {
+        height = "7cm", width = "15cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Parameter R2",
+        xmin = 0, 
+        xmax = 101,
+        # ymax = 15,
+        # ymin = 10,
+        xtick = 0:10:100,
+        legend_pos= "north west", 
+        font = raw"\Large",
+    },
+
+    Plot({color = Ϟ[8], "thick", mark="square*"}, Table({x = "x", y = "y"}, x = x40_2RC.SOC .* 100, y = x40_2RC.R2)),
+    LegendEntry("47 kPa"),
+    Plot({color = Ϟ[10], "thick", mark="*"}, Table({x = "x", y = "y"}, x = x25_2RC.SOC .* 100, y = x25_2RC.R2)),
+    LegendEntry("140 kPa"),
+    Plot({color = Ϟ[14], "thick", mark="triangle*"}, Table({x = "x", y = "y"}, x = x130_2RC.SOC .* 100, y = x130_2RC.R2)),
+    LegendEntry("210 kPa"),
+
+)
+
+C2_2_2_plot = @pgf Axis(
+    {
+        height = "7cm", width = "15cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Parameter C2",
+        xmin = 0, 
+        xmax = 101,
+        # ymax = 15,
+        # ymin = 10,
+        xtick = 0:10:100,
+        legend_pos= "north west", 
+        font = raw"\Large",
+    },
+
+    Plot({color = Ϟ[8], "thick", mark="square*"}, Table({x = "x", y = "y"}, x = x40_2RC.SOC .* 100, y = x40_2RC.C2)),
+    LegendEntry("47 kPa"),
+    Plot({color = Ϟ[10], "thick", mark="*"}, Table({x = "x", y = "y"}, x = x25_2RC.SOC .* 100, y = x25_2RC.C2)),
+    LegendEntry("140 kPa"),
+    Plot({color = Ϟ[14], "thick", mark="triangle*"}, Table({x = "x", y = "y"}, x = x130_2RC.SOC .* 100, y = x130_2RC.C2)),
+    LegendEntry("210 kPa"),
+
+)
+
+pgfsave("R0_2_2_plot.pdf", R0_2_2_plot)
+pgfsave("R1_2_2_plot.pdf", R1_2_2_plot)
+pgfsave("C1_2_2_plot.pdf", C1_2_2_plot)
+pgfsave("R2_2_2.pdf", R2_2_2_plot)
+pgfsave("C2_2_2.pdf", C2_2_2_plot)
+
+
+R0_1_2_plot = @pgf Axis(
+    {
+        height = "7cm", width = "15cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Parameter R0",
+        xmin = 0, 
+        xmax = 101,
+        # ymax = .013,
+        xtick = 0:10:100,
+        legend_pos= "south west", 
+        font = raw"\Large",
+    },
+
+    Plot({color = Ϟ[7], "thick", mark="square*"}, Table({x = "x", y = "y"}, x = x0_2RC.SOC .* 100, y = x0_2RC.R0)),
+    LegendEntry("0 kPa"),
+    Plot({color = Ϟ[5], "thick", mark="*"}, Table({x = "x", y = "y"}, x = x50_2RC.SOC .* 100, y = x50_2RC.R0)),
+    LegendEntry("50 kPa"),
+    Plot({color = Ϟ[6], "thick", mark="triangle*"}, Table({x = "x", y = "y"}, x = x100_2RC.SOC .* 100, y = x100_2RC.R0)),
+    LegendEntry("100 kPa"),
+
+)
+
+R1_1_2_plot = @pgf Axis(
+    {
+        height = "7cm", width = "15cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Parameter R1",
+        xmin = 0, 
+        xmax = 101,
+        # ymax = 15,
+        # ymin = 10,
+        xtick = 0:10:100,
+        legend_pos= "north west", 
+        font = raw"\Large",
+    },
+
+    Plot({color = Ϟ[7], "thick", mark="square*"}, Table({x = "x", y = "y"}, x = x0_2RC.SOC .* 100, y = x0_2RC.R1)),
+    LegendEntry("0 kPa"),
+    Plot({color = Ϟ[5], "thick", mark="*"}, Table({x = "x", y = "y"}, x = x50_2RC.SOC .* 100, y = x50_2RC.R1)),
+    LegendEntry("50 kPa"),
+    Plot({color = Ϟ[6], "thick", mark="triangle*"}, Table({x = "x", y = "y"}, x = x100_2RC.SOC .* 100, y = x100_2RC.R1)),
+    LegendEntry("100 kPa"),
+
+)
+
+C1_1_2_plot = @pgf Axis(
+    {
+        height = "7cm", width = "15cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Parameter C1",
+        xmin = 0, 
+        xmax = 101,
+        # ymax = 15,
+        # ymin = 10,
+        xtick = 0:10:100,
+        legend_pos= "north west", 
+        font = raw"\Large",
+    },
+
+    Plot({color = Ϟ[7], "thick", mark="square*"}, Table({x = "x", y = "y"}, x = x0_2RC.SOC .* 100, y = x0_2RC.C1)),
+    LegendEntry("0 kPa"),
+    Plot({color = Ϟ[5], "thick", mark="*"}, Table({x = "x", y = "y"}, x = x50_2RC.SOC .* 100, y = x50_2RC.C1)),
+    LegendEntry("50 kPa"),
+    Plot({color = Ϟ[6], "thick", mark="triangle*"}, Table({x = "x", y = "y"}, x = x100_2RC.SOC .* 100, y = x100_2RC.C1)),
+    LegendEntry("100 kPa"),
+
+)
+
+R2_1_2_plot = @pgf Axis(
+    {
+        height = "7cm", width = "15cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Parameter R2",
+        xmin = 0, 
+        xmax = 101,
+        # ymax = 15,
+        # ymin = 10,
+        xtick = 0:10:100,
+        legend_pos= "north west", 
+        font = raw"\Large",
+    },
+
+    Plot({color = Ϟ[7], "thick", mark="square*"}, Table({x = "x", y = "y"}, x = x0_2RC.SOC .* 100, y = x0_2RC.R2)),
+    LegendEntry("0 kPa"),
+    Plot({color = Ϟ[5], "thick", mark="*"}, Table({x = "x", y = "y"}, x = x50_2RC.SOC .* 100, y = x50_2RC.R2)),
+    LegendEntry("50 kPa"),
+    Plot({color = Ϟ[6], "thick", mark="triangle*"}, Table({x = "x", y = "y"}, x = x100_2RC.SOC .* 100, y = x100_2RC.R2)),
+    LegendEntry("100 kPa"),
+
+)
+
+C2_1_2_plot = @pgf Axis(
+    {
+        height = "7cm", width = "15cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Parameter C2",
+        xmin = 0, 
+        xmax = 101,
+        # ymax = 15,
+        # ymin = 10,
+        xtick = 0:10:100,
+        legend_pos= "north west", 
+        font = raw"\Large",
+    },
+
+    Plot({color = Ϟ[7], "thick", mark="square*"}, Table({x = "x", y = "y"}, x = x0_2RC.SOC .* 100, y = x0_2RC.C2)),
+    LegendEntry("0 kPa"),
+    Plot({color = Ϟ[5], "thick", mark="*"}, Table({x = "x", y = "y"}, x = x50_2RC.SOC .* 100, y = x50_2RC.C2)),
+    LegendEntry("50 kPa"),
+    Plot({color = Ϟ[6], "thick", mark="triangle*"}, Table({x = "x", y = "y"}, x = x100_2RC.SOC .* 100, y = x100_2RC.C2)),
+    LegendEntry("100 kPa"),
+
+)
+
+pgfsave("R0_1_2_plot.pdf", R0_1_2_plot)
+pgfsave("R1_1_2_plot.pdf", R1_1_2_plot)
+pgfsave("C1_1_2_plot.pdf", C1_1_2_plot)
+pgfsave("R2_1_2.pdf", R2_1_2_plot)
+pgfsave("C2_1_2.pdf", C2_1_2_plot)

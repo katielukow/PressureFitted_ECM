@@ -217,7 +217,7 @@ function hppc_pulse(data, soc, soc_increment, dstep)
 	return d[4:end, :]
 end
 
-function hppc_fun(pd, soc, soc_step, dstep,cycle_index)
+function hppc_fun(pd, soc, soc_step, dstep, cycle_index)
     
     hppc = hppc_pulse(pd, soc, soc_step,dstep)
     hppc = filter(row -> row."Cycle_Index" == cycle_index, hppc)
