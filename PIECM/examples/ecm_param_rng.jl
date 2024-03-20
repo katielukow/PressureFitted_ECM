@@ -31,16 +31,19 @@ err0, Z0 = soc_range(P0kpa, Q0, ocv2, 5, 19, [1000, 50, 12000], [0.001, .0005, 0
 err50, Z50 = soc_range(mbpf50kpa, Q50, ocv2, 5, 19, [1000, 50, 12000], [0.001, .0005, 0.010], [0.1, .1, 0.9]);
 err100, Z100 = soc_range(mbpf100kpa, Q100, ocv2, 5, 19, [1000, 50, 12000], [0.001, .0005, 0.010], [0.1, .1, 0.9]);
 
-min40 = rmins(Z40[0.9])
+min40 = rmins(Z40[0.1])
 min25 = rmins(Z25[0.9])
 min130 = rmins(Z130[0.9])
 
-for i in Z40.keys
-    title = "Cell Model (2), 40 kPa, " * string(i*100) * "% SOC"
-    p = pres_contour(Z40[i], rmins(z40[i]), title)
+function plotloop(df, title)
+    for i in keys(df)
+        # print(i)
+        pres_contour(df[i], rmins(df[i]), title)
+    end
 end
+
 p40 = pres_contour(Z40[0.9], min40, "40 kPa")
-relayout!(p40, titlefont_size=20, font_size=18, width=200, height=1000, margin_l=100, margin_r=100, margin_t=100, margin_b=100, showlegend=false)
+relayout!(p, titlefont_size=20, font_size=18, width=600, height=1000, margin_l=100, margin_r=100, margin_t=100, margin_b=100, showlegend=false)
 p25 = pres_contour(Z25[0.9], min25, "135 kPa")
 p130 = pres_contour(Z130[0.9],min130,"210 kPa")
 p = [p40 p25 p130]

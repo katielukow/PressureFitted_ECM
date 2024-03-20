@@ -433,11 +433,18 @@ function rmins(data)
 end
 
 function pres_contour(dict, min, title)
-	t1 = contour(z=dict[min[1,:R0]][2:13, 3:end], x=dict[min[1,:R0]][1, 2:13], y=dict[min[1,:R0]][3:end,1], contours_start =0,contours_end=2, colorbar_title="Error", showscale=true)
+	t1 = contour(z=dict[min[1,:R0]][2:13, 3:end], x=dict[min[1,:R0]][1, 2:13], y=dict[min[1,:R0]][3:end,1], 
+	contours_start =0,contours_end=2, 
+	colorbar_title="Error", showscale=true)
 	t2 = scatter(x=[min[1,:C1]],y=[min[1,:R1]], mode="markers", showlegend = false)
-	layout1 = Layout(title=title)
-	
-	return plot([t1,t2], layout1)
+	layout1 = PlotlyJS.Layout(titlefont_size=20, font_size=18, width=600, height=1000, margin_l=100, margin_r=100, margin_t=100, margin_b=100, showlegend=false)
+	p = plot([t1,t2], layout1)
+	# relayout!(p, titlefont_size=20, font_size=18, width=600, height=1000, margin_l=100, margin_r=100, margin_t=100, margin_b=100, showlegend=false)
+	savefig(p, title)
+
+	# PlotlyJS.savefig(p, "figures/test.pdf")
+
+	return p
 
 end
 
