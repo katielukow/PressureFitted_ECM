@@ -167,18 +167,37 @@ function HPPC(data, soc_increment, cycle, dis_pulse_step, char_pulse_step, dis_s
 
 	return γ
 end
+function hppc_calc(dataframe, i, init_V)
+    df = filter(row -> row."TC_Counter1" == (i - 1), dataframe)
 
-function hppc_calc(df, init_V)
-		# Use logical indexing to find rows with negative current
-		Ineg = df[df."Current(A)" .< 0, :]
-	
-		# Directly access the columns without copying
-		min_voltage = minimum(Ineg."Voltage(V)")
-		mean_current = mean(Ineg."Current(A)")
-	
-		# Return the calculation
-		return abs((init_V - min_voltage) / abs(mean_current))
+    r = abs((init_V - df[end, "Voltage(V)"]) / abs(mean(df[:, "Current(A)"])))
+    P = df[:, "Voltage(V)"] .* df[:, "Current(A)"]
+    P_min = findmin(abs.(P))[1]
+    P_max = findmax(abs.(P))[1]
+    P_avg = mean(P)
+    I_min = findmin(abs.(df[:, "Current(A)"]))[1]
+    I_max = findmax(abs.(df[:, "Current(A)"]))[1]
+
+    t = [P_max P_min I_max I_min]
+
+    if df[1, "Current(A)"] < 0
+        t .= -t
+    end
+
+    return [r, P_avg, t[1], t[2], t[3], t[4]]
 end
+
+# function hppc_calc(df, init_V)
+# 		# Use logical indexing to find rows with negative current
+# 		Ineg = df[df."Current(A)" .< 0, :]
+	
+# 		# Directly access the columns without copying
+# 		min_voltage = minimum(Ineg."Voltage(V)")
+# 		mean_current = mean(Ineg."Current(A)")
+	
+# 		# Return the calculation
+# 		return abs((init_V - min_voltage) / abs(mean_current))
+# end
 
 function Capacity_Fade(df, d_stepinit, d_step)
 	SOH = Array{Float64}(undef, 6, 4)

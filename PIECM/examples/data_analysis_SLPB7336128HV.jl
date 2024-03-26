@@ -63,27 +63,27 @@ p140 = presplot(P140kpa, 23)
 
 
 dig=0
-P_25kpa = pres_avg("data/PressureData/230320_MBPF_Investigation_11_0043_25kpa.csv",mbpf25kpa_1,celldim,dig)
-P_40kpa = pres_avg("data/PressureData/230321_PressureTest_11_0048.csv",mbpf40kpa_1,celldim,dig)
-P_130kpa = pres_avg("data/PressureData/230321_PressureTest_11_0044.csv",mbpf130kpa_1,celldim,dig)
+# P_25kpa = pres_avg("data/PressureData/230320_MBPF_Investigation_11_0043_25kpa.csv",mbpf25kpa_1,celldim,dig)
+# P_40kpa = pres_avg("data/PressureData/230321_PressureTest_11_0048.csv",mbpf40kpa_1,celldim,dig)
+# P_130kpa = pres_avg("data/PressureData/230321_PressureTest_11_0044.csv",mbpf130kpa_1,celldim,dig)
 
 
 # ---------------- DCIR and Power Calculations -------------------------
 # Outputs dictionary of calculated values for DC internal resistance and power values at each SOC point
 # Two dictionary keys, Discharge and Charge
-dcir_25kpa_1 = HPPC(mbpf25kpa, 10, 1, 17, 19, 22, 6, 13)
+dcir_25kpa_1 = HPPC(mbpf140kpa, 10, 1, 17, 19, 22, 6, 13)
 dcir_40kpa_1 = HPPC(mbpf40kpa, 10, 1, 20, 22, 25, 6, 13)
-dcir_130kpa_1 = HPPC(mbpf130kpa, 10, 1, 20, 22, 25, 6, 13)
+dcir_130kpa_1 = HPPC(mbpf200kpa, 10, 1, 20, 22, 25, 6, 13)
 
 # ------------------- HPPC Pulse Functions ---------------------------------
 # Filters HPPC data based on a specific SOC point, currently must be a multiple of the SOC soc_increment
 soc = 1
 
 
-mbpf25kpa_1 = hppc_fun(mbpf25kpa, soc*100, 10, 1, 17, 19, 1)
+mbpf25kpa_1 = hppc_fun(mbpf140kpa, soc*100, 10, 1, 17, 19, 1)
 mbpf40kpa_1 = hppc_fun(mbpf40kpa, soc*100, 10, 1, 20, 22, 1)
 mbpf40kpa_2 = hppc_fun(mbpf40kpa, [20,10], 10, 1, 20, 22, 1)
-mbpf130kpa_1 = hppc_fun(mbpf130kpa, soc*100, 10, 1, 20, 22, 1)
+mbpf130kpa_1 = hppc_fun(mbpf200kpa, soc*100, 10, 1, 20, 22, 1)
 
 ocv = pocv("data/OCV/220310_BTC_POCV_GITT_Mel_SLPB7336128HV_1_25C_Channel_5_Wb_1.csv", 5, 8, 1000)
 
@@ -153,11 +153,11 @@ P130kpa_norm2 = P130kpa_charge[:,"Pressure"] .- P130kpa_charge[1,"Pressure"]
     },
 
     Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = dcir_40kpa_1["Discharge"][:,"SOC"], y = dcir_40kpa_1["Discharge"][:,"Resistance"].*1000)),
-    LegendEntry("50 kPa"),
+    LegendEntry("47 kPa"),
     Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = dcir_25kpa_1["Discharge"][:,"SOC"], y = dcir_25kpa_1["Discharge"][:,"Resistance"].*1000)),
     LegendEntry("140 kPa"),
     Plot({color = Ϟ[7], "thick", only_marks}, Table({x = "x", y = "y"}, x = dcir_130kpa_1["Discharge"][:,"SOC"], y = dcir_130kpa_1["Discharge"][:,"Resistance"].*1000)),
-    LegendEntry("200 kPa")
+    LegendEntry("210 kPa")
 
 )
 
@@ -455,18 +455,18 @@ PHPPC_plot = @pgf Axis(
     {
         height = "7cm", width = "14cm",    
         xlabel="State of Charge ["*L"\%"*"]",
-        ylabel="Pressure [kPa]",
+        ylabel="Stack Pressure [kPa]",
         xmin = 0, 
         ymin = -5,
         legend_pos= "north west"
     },
 
     Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = p40[:,2], y = p40[:,1])),
-    LegendEntry("40 kPa"),
+    LegendEntry("47 kPa"),
     Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = p140[:,2], y = p140[:,1])),
     LegendEntry("140 kPa"),
     Plot({color = Ϟ[7], "thick", only_marks}, Table({x = "x", y = "y"}, x = p200[:,2], y = p200[:,1])),
-    LegendEntry("200 kPa"),
+    LegendEntry("210 kPa"),
 
 )
 pgfsave("figures/PHPPC_plot_mod1.pdf",

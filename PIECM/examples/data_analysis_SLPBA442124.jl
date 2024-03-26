@@ -58,23 +58,49 @@ for j in 1:20:101
     p50_all[string(j)] = p50_plot
 end
 
-p100_all = OrderedDict()
 for j in 1:20:101
     k = 1
     p100_plot = Array{Float64}(undef, 20, 2)
 
-    p_temp = filter(row -> row.Cycle_Index == j, P100kpa)
+    if j == 1
+        p_temp = filter(row -> row.Cycle_Index == j, P100kpa)
+        for i in 0:19
+            p = filter(row -> row.Step_Index == 25 && row.TC_Counter1 == i , p_temp)
+            p100_plot[k,1] = mean(skipmissing(p[:,"Pressure"]))/1000
+            p100_plot[k,2] = 100 - (i+1) * 5
+            k += 1
+        end
+    else
+        p_temp = filter(row -> row.Cycle_Index == j, P100kpa)
 
-    for i in 0:19
-        
-        p = filter(row -> row.Step_Index == 60 || row.Step_Index == 25 && row.TC_Counter1 == i , p_temp)
-        p100_plot[k,1] = mean(skipmissing(p[:,"Pressure"]))/1000
-        p100_plot[k,2] = 100 - (i+1) * 5
-        k += 1
+        for i in 0:19
+            p = filter(row -> row.Step_Index == 60 && row.TC_Counter1 == i , p_temp)
+            p100_plot[k,1] = mean(skipmissing(p[:,"Pressure"]))/1000
+            p100_plot[k,2] = 100 - (i+1) * 5
+            k += 1
+        end
     end
-    
-    p100_all[string(j)] = p100_plot
+
+    p50_all[string(j)] = p50_plot
 end
+
+# p100_all = OrderedDict()
+# for j in 1:20:101
+#     k = 1
+#     p100_plot = Array{Float64}(undef, 20, 2)
+
+#     p_temp = filter(row -> row.Cycle_Index == j, P100kpa)
+
+#     for i in 0:19
+        
+#         p = filter(row -> row.Step_Index == 60 || row.Step_Index == 25 && row.TC_Counter1 == i , p_temp)
+#         p100_plot[k,1] = mean(skipmissing(p[:,"Pressure"]))/1000
+#         p100_plot[k,2] = 100 - (i+1) * 5
+#         k += 1
+#     end
+    
+#     p100_all[string(j)] = p100_plot
+# end
 
 
 # -------------hppc data-----------------
@@ -189,34 +215,63 @@ CSV.write("p0_discharge.csv", p0_dis_init)
 
 # -------------plots-----------------
 
-# P50_plot = @pgf Axis(
+P50_plot = @pgf Axis(
 
-#     {
-#         height = "7cm", width = "15cm",    
-#         xlabel="State of Charge ["*L"\%"*"]",
-#         ylabel="Stack Pressure [kPa]",
-#         xmin = 0, 
-#         xmax = 101,
-#         # ymax = 15,
-#         # ymin = 10,
-#         xtick = 0:10:100,
-#         legend_pos= "north west"
-#     },
+    {
+        height = "7cm", width = "15cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Stack Pressure [kPa]",
+        xmin = 0, 
+        xmax = 101,
+        # ymax = 15,
+        # ymin = 10,
+        xtick = 0:10:100,
+        legend_pos= "north west"
+    },
 
-#     Plot({color = Ϟ[4], "thick", only_marks}, Table({x = "x", y = "y"}, x = p50_all["1"][:,2], y = p50_all["1"][:,1])),
-#     LegendEntry("Cycle 1"),
-#     Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = p50_all["21"][:,2], y = p50_all["21"][:,1])),
-#     LegendEntry("Cycle 21"),
-#     Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = p50_all["41"][:,2], y = p50_all["41"][:,1])),
-#     LegendEntry("Cycle 41"),
-#     Plot({color = Ϟ[7], "thick", only_marks}, Table({x = "x", y = "y"}, x = p50_all["61"][:,2], y = p50_all["61"][:,1])),
-#     LegendEntry("Cycle 61"),
-#     Plot({color = Ϟ[8], "thick", only_marks}, Table({x = "x", y = "y"}, x = p50_all["81"][:,2], y = p50_all["81"][:,1])),
-#     LegendEntry("Cycle 81"),
-#     Plot({color = Ϟ[10], "thick", only_marks}, Table({x = "x", y = "y"}, x = p50_all["101"][:,2], y = p50_all["101"][:,1])),
-#     LegendEntry("Cycle 101"),
+    Plot({color = Ϟ[4], "thick", only_marks}, Table({x = "x", y = "y"}, x = p50_all["1"][:,2], y = p50_all["1"][:,1])),
+    LegendEntry("Cycle 1"),
+    Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = p50_all["21"][:,2], y = p50_all["21"][:,1])),
+    LegendEntry("Cycle 21"),
+    Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = p50_all["41"][:,2], y = p50_all["41"][:,1])),
+    LegendEntry("Cycle 41"),
+    Plot({color = Ϟ[7], "thick", only_marks}, Table({x = "x", y = "y"}, x = p50_all["61"][:,2], y = p50_all["61"][:,1])),
+    LegendEntry("Cycle 61"),
+    Plot({color = Ϟ[8], "thick", only_marks}, Table({x = "x", y = "y"}, x = p50_all["81"][:,2], y = p50_all["81"][:,1])),
+    LegendEntry("Cycle 81"),
+    Plot({color = Ϟ[10], "thick", only_marks}, Table({x = "x", y = "y"}, x = p50_all["101"][:,2], y = p50_all["101"][:,1])),
+    LegendEntry("Cycle 101"),
 
-# )
+)
+
+P100_plot = @pgf Axis(
+
+    {
+        height = "7cm", width = "15cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Stack Pressure [kPa]",
+        xmin = 0, 
+        xmax = 101,
+        # ymax = 15,
+        # ymin = 10,
+        xtick = 0:10:100,
+        legend_pos= "north west"
+    },
+
+    Plot({color = Ϟ[4], "thick", only_marks}, Table({x = "x", y = "y"}, x = p100_all["1"][:,2], y = p100_all["1"][:,1])),
+    LegendEntry("Cycle 1"),
+    Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = p100_all["21"][:,2], y = p100_all["21"][:,1])),
+    LegendEntry("Cycle 21"),
+    Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = p100_all["41"][:,2], y = p100_all["41"][:,1])),
+    LegendEntry("Cycle 41"),
+    Plot({color = Ϟ[7], "thick", only_marks}, Table({x = "x", y = "y"}, x = p100_all["61"][:,2], y = p100_all["61"][:,1])),
+    LegendEntry("Cycle 61"),
+    Plot({color = Ϟ[8], "thick", only_marks}, Table({x = "x", y = "y"}, x = p100_all["81"][:,2], y = p100_all["81"][:,1])),
+    LegendEntry("Cycle 81"),
+    Plot({color = Ϟ[10], "thick", only_marks}, Table({x = "x", y = "y"}, x = p100_all["101"][:,2], y = p100_all["101"][:,1])),
+    LegendEntry("Cycle 101"),
+
+)
 
 # Pcomp_plot = @pgf Axis(
 #     {
@@ -402,71 +457,78 @@ Pulse15_plot = @pgf GroupPlot(
 
 )
 
-# PresDis2_plot = @pgf GroupPlot(
-#     {
-#         group_style =
-#         {
-#             group_size="3 by 2",
-#             xticklabels_at="edge bottom",
-#             # yticklabels_at="edge left",
-#             # legend_pos= "north west"
-#             horizontal_sep = "2cm",
-#             vertical_sep = "2cm"
-#         },
-#         height = "8cm", width = "10cm",    
+PresDis2_plot = @pgf GroupPlot(
+    {
+        group_style =
+        {
+            group_size="3 by 2",
+            xticklabels_at="edge bottom",
+            # yticklabels_at="edge left",
+            # legend_pos= "north west"
+            horizontal_sep = "2cm",
+            vertical_sep = "2cm"
+        },
+        height = "8cm", width = "10cm",    
 
-#     },
+    },
 
-#     {
-#         ylabel="Voltage [V]",
-#         legend_pos= "south west",
-#     },
-#     Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"]./3600, y = p40_discharge[:,"Voltage(V)"])),
-#     LegendEntry("Cell Model (1) - 40 kPa"),
-#     Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"]./3600, y = p50csv[:,"Voltage(V)"])),
-#     LegendEntry("Cel Model (2) - 50 kPa"),
+    {
+        ylabel="Voltage [V]",
+        legend_pos= "south west",
+    },
+    Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"]./3600, y = p40_discharge[:,"Voltage(V)"])),
+    LegendEntry("Cell Model (1) - 47 kPa"),
 
-#     {
-#         ylabel="Pressure [kPa]",
-#     },
+    Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"]./3600, y = p50csv[:,"Voltage(V)"])),
+    LegendEntry("Cel Model (2) - 50 kPa"),
 
-#     Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"]./3600, y = p50csv[:,"Pressure"])),
-#     Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"]./3600, y = p40_discharge[:,"Pressure"]./1000)),
+    {
+        ylabel="Pressure [kPa]",
+    },
 
-#     {
-#         ylabel="Temperature [C]",
-#     },
-
-#     Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"]./3600, y = p50csv[:,"Aux_Temperature_1(C)"])),
-#     Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"]./3600, y = p40_discharge[:,"Aux_Temperature_1(C)"])),
+    Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"]./3600, y = p50csv[:,"Pressure"])),
+    Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"]./3600, y = p40_discharge[:,"Pressure"]./1000)),
 
 
-#     {
-#         xlabel="Time [hours]",
-#         ylabel="Voltage [V]",
-#         legend_pos= "south west",
-#     },
-#     Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = p200_discharge[:,"Step_Time(s)"]./3600, y = p200_discharge[:,"Voltage(V)"])),
-#     LegendEntry("Cell Model (1) - 210 kPa"),
-#     Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p100csv[:,"Step_Time(s)"]./3600, y = p100csv[:,"Voltage(V)"])),
-#     LegendEntry("Cell Model (2) - 100 kPa"),
+    {
+        ylabel="Temperature [C]",
+    },
 
-#     {
-#         xlabel="Time [hours]",
-#         ylabel="Pressure [kPa]",
-#     },
+    Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"]./3600, y = p50csv[:,"Aux_Temperature_1(C)"])),
+    Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"]./3600, y = p40_discharge[:,"Aux_Temperature_1(C)"])),
 
-#     Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p100csv[:,"Step_Time(s)"]./3600, y = p100csv[:,"Pressure"])),
-#     Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = p200_discharge[:,"Step_Time(s)"]./3600, y = p200_discharge[:,"Pressure"]./1000)),
 
-#     {
-#         xlabel="Time [hours]",
-#         ylabel="Temperature [C]",
-#     },
 
-#     Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = p200_discharge[:,"Step_Time(s)"]./3600, y = p200_discharge[:,"Aux_Temperature_1(C)"])),
-#     Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p100csv[:,"Step_Time(s)"]./3600, y = p100csv[:,"Aux_Temperature_1(C)"])),
-# )
+    {
+        xlabel="Time [hours]",
+        ylabel="Voltage [V]",
+        legend_pos= "south west",
+    },
+    Plot({color = Ϟ[14], "thick"}, Table({x = "x", y = "y"}, x = p140_discharge[:,"Step_Time(s)"]./3600, y = p140_discharge[:,"Voltage(V)"])),
+    LegendEntry("Cell Model (1) - 140 kPa"),
+    Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = p200_discharge[:,"Step_Time(s)"]./3600, y = p200_discharge[:,"Voltage(V)"])),
+    LegendEntry("Cell Model (1) - 210 kPa"),
+    Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p100csv[:,"Step_Time(s)"]./3600, y = p100csv[:,"Voltage(V)"])),
+    LegendEntry("Cell Model (2) - 100 kPa"),
+
+    {
+        xlabel="Time [hours]",
+        ylabel="Pressure [kPa]",
+    },
+
+    Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p100csv[:,"Step_Time(s)"]./3600, y = p100csv[:,"Pressure"])),
+    Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = p200_discharge[:,"Step_Time(s)"]./3600, y = p200_discharge[:,"Pressure"]./1000)),
+    Plot({color = Ϟ[14], "thick"}, Table({x = "x", y = "y"}, x = p140_discharge[:,"Step_Time(s)"]./3600, y = p140_discharge[:,"Pressure"]./1000)),
+
+    {
+        xlabel="Time [hours]",
+        ylabel="Temperature [C]",
+    },
+
+    Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = p200_discharge[:,"Step_Time(s)"]./3600, y = p200_discharge[:,"Aux_Temperature_1(C)"])),
+    Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p100csv[:,"Step_Time(s)"]./3600, y = p100csv[:,"Aux_Temperature_1(C)"])),
+    Plot({color = Ϟ[14], "thick"}, Table({x = "x", y = "y"}, x = p140_discharge[:,"Step_Time(s)"]./3600, y = p140_discharge[:,"Aux_Temperature_1(C)"])),
+)
 
 # PresTemp_plot = @pgf GroupPlot(
 
@@ -493,7 +555,7 @@ Pulse15_plot = @pgf GroupPlot(
 #         legend_pos= "south east"
 #     },
 #     Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p40_discharge[:,"Step_Time(s)"]./3600, y = p40_discharge[:,"Aux_Temperature_1(C)"])),
-#     LegendEntry("Cell 1 - 40 kPa"),
+#     LegendEntry("Cell 1 - 47 kPa"),
 #     # Plot({color = Ϟ[8], "thick"}, Table({x = "x", y = "y"}, x = p200_discharge[:,"Step_Time(s)"], y = p200_discharge[:,"Voltage(V)"])),
 #     # LegendEntry("Cell 1 - 210 kPa"),
 #     Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p50csv[:,"Step_Time(s)"]./3600, y = p50csv[:,"Aux_Temperature_1(C)"])),
@@ -937,8 +999,8 @@ SOH_plot)
 # Ω_plot)
 # pgfsave("figures/Pow_plot.pdf",
 # Pow_plot)
-# pgfsave("figures/pressure_dis_comparison.pdf",
-# PresDis2_plot)
+pgfsave("figures/pressure_dis_comparison.pdf",
+PresDis2_plot)
 
 
 
