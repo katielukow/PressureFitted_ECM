@@ -31,10 +31,6 @@ err0, Z0 = soc_range(P0kpa, Q0, ocv2, 5, 19, [1000, 50, 12000], [0.001, .0005, 0
 err50, Z50 = soc_range(mbpf50kpa, Q50, ocv2, 5, 19, [1000, 50, 12000], [0.001, .0005, 0.010], [0.1, .1, 0.9]);
 err100, Z100 = soc_range(mbpf100kpa, Q100, ocv2, 5, 19, [1000, 50, 12000], [0.001, .0005, 0.010], [0.1, .1, 0.9]);
 
-min40 = rmins(Z40[0.1])
-min25 = rmins(Z25[0.9])
-min130 = rmins(Z130[0.9])
-
 function plotloop(df, title)
     for i in keys(df)
         # print(i)
@@ -42,29 +38,46 @@ function plotloop(df, title)
     end
 end
 
-p40 = pres_contour(Z40[0.9], min40, "40 kPa")
-relayout!(p, titlefont_size=20, font_size=18, width=600, height=1000, margin_l=100, margin_r=100, margin_t=100, margin_b=100, showlegend=false)
-p25 = pres_contour(Z25[0.9], min25, "135 kPa")
-p130 = pres_contour(Z130[0.9],min130,"210 kPa")
-p = [p40 p25 p130]
+min40 = rmins(Z40[0.2])
+min25 = rmins(Z25[0.2])
+min130 = rmins(Z130[0.2])
 
-min0 = rmins(Z0[0.9])
-min50 = rmins(Z50[0.9])
-min100 = rmins(Z100[0.9])
+p40 = pres_contour(Z40[0.2], min40, "47 kPa")
+p25 = pres_contour(Z25[0.2], min25, "140 kPa")
+p130 = pres_contour(Z130[0.2],min130, "210 kPa")
 
-p0 = pres_contour(Z0[0.9], min0, "0 kPa")
-p50 = pres_contour(Z50[0.9], min50, "50 kPa")
-p100 = pres_contour(Z100[0.9],min100,"100 kPa")
-p = [p0 p50 p100]
+savefig(p40, "cp_47kpa_20.pdf", width=600, height=1000)
+savefig(p25, "cp_130kpa_20.pdf", width=600, height=1000)
+savefig(p130, "cp_210kpa_20.pdf", width=600, height=1000)
 
-p130_1 = pres_contour(Z130[0.9],min130,"R0 = 0.0087, Err = 0.040 V")
-p130_2 = pres_contour(Z130[0.9],min130[2:end,:],"R0 = 0.0077, Err = 0.154 V")
-p130_3 = pres_contour(Z130[0.9],min130[3:end,:],"R0 = 0.0097, Err = 0.200 V")
+min0 = rmins(Z0[0.2])
+min50 = rmins(Z50[0.2])
+min100 = rmins(Z100[0.2])
 
-p = [p130_1 p130_2 p130_3]
+p0 = pres_contour(Z0[0.2], min0, "0 kPa")
+p50 = pres_contour(Z50[0.2], min50, "50 kPa")
+p100 = pres_contour(Z100[0.2],min100,"100 kPa")
+
+savefig(p0, "cp_0kpa_20.pdf", width=600, height=1000)
+savefig(p50, "cp_50kpa_20.pdf", width=600, height=1000)
+savefig(p100, "cp_100kpa_20.pdf", width=600, height=1000)
+
+min130 = rmins(Z130[0.5])
+p130_1 = pres_contour(Z130[0.5],min130,"R0 = 0.0087, Err = 0.040 V")
+p130_2 = pres_contour(Z130[0.5],min130[2:end,:],"R0 = 0.0077, Err = 0.154 V")
+p130_3 = pres_contour(Z130[0.5],min130[3:end,:],"R0 = 0.0097, Err = 0.200 V")
+p130_4 = pres_contour(Z130[0.5],min130[6:end,:],"R0 = 0.0106, Err = 0.781 V")
+
+p = [p130_1 p130_2 p130_3 p130_4]
 relayout!(p, titlefont_size=20, font_size=18, width=1000, height=1000, margin_l=100, margin_r=100, margin_t=100, margin_b=100, showlegend=false)
 
-# savefig(p, "contour_plots_20.pdf")
+savefig(p, "contour_plots_20.pdf")
+
+savefig(p130_1, "cp_210kpa_20_1.pdf", width=600, height=1000)
+savefig(p130_2, "cp_210kpa_20_2.pdf", width=600, height=1000)
+savefig(p130_3, "cp_210kpa_20_3.pdf", width=600, height=1000)
+savefig(p130_4, "cp_210kpa_20_nom.pdf", width=600, height=1000)
+
 
 
 

@@ -167,37 +167,37 @@ function HPPC(data, soc_increment, cycle, dis_pulse_step, char_pulse_step, dis_s
 
 	return γ
 end
-function hppc_calc(dataframe, i, init_V)
-    df = filter(row -> row."TC_Counter1" == (i - 1), dataframe)
+# function hppc_calc(dataframe, i, init_V)
+#     df = filter(row -> row."TC_Counter1" == (i - 1), dataframe)
 
-    r = abs((init_V - df[end, "Voltage(V)"]) / abs(mean(df[:, "Current(A)"])))
-    P = df[:, "Voltage(V)"] .* df[:, "Current(A)"]
-    P_min = findmin(abs.(P))[1]
-    P_max = findmax(abs.(P))[1]
-    P_avg = mean(P)
-    I_min = findmin(abs.(df[:, "Current(A)"]))[1]
-    I_max = findmax(abs.(df[:, "Current(A)"]))[1]
+#     r = abs((init_V - df[end, "Voltage(V)"]) / abs(mean(df[:, "Current(A)"])))
+#     P = df[:, "Voltage(V)"] .* df[:, "Current(A)"]
+#     P_min = findmin(abs.(P))[1]
+#     P_max = findmax(abs.(P))[1]
+#     P_avg = mean(P)
+#     I_min = findmin(abs.(df[:, "Current(A)"]))[1]
+#     I_max = findmax(abs.(df[:, "Current(A)"]))[1]
 
-    t = [P_max P_min I_max I_min]
+#     t = [P_max P_min I_max I_min]
 
-    if df[1, "Current(A)"] < 0
-        t .= -t
-    end
+#     if df[1, "Current(A)"] < 0
+#         t .= -t
+#     end
 
-    return [r, P_avg, t[1], t[2], t[3], t[4]]
-end
-
-# function hppc_calc(df, init_V)
-# 		# Use logical indexing to find rows with negative current
-# 		Ineg = df[df."Current(A)" .< 0, :]
-	
-# 		# Directly access the columns without copying
-# 		min_voltage = minimum(Ineg."Voltage(V)")
-# 		mean_current = mean(Ineg."Current(A)")
-	
-# 		# Return the calculation
-# 		return abs((init_V - min_voltage) / abs(mean_current))
+#     return [r, P_avg, t[1], t[2], t[3], t[4]]
 # end
+
+function hppc_calc(df, init_V)
+		# Use logical indexing to find rows with negative current
+		Ineg = df[df."Current(A)" .< 0, :]
+	
+		# Directly access the columns without copying
+		min_voltage = minimum(Ineg."Voltage(V)")
+		mean_current = mean(Ineg."Current(A)")
+	
+		# Return the calculation
+		return abs((init_V - min_voltage) / abs(mean_current))
+end
 
 function Capacity_Fade(df, d_stepinit, d_step)
 	SOH = Array{Float64}(undef, 6, 4)
@@ -451,15 +451,15 @@ function rmins(data)
     return sort!(r, :Error)
 end
 
-function pres_contour(dict, min, title)
-	t1 = contour(z=dict[min[1,:R0]][2:13, 3:end], x=dict[min[1,:R0]][1, 2:13], y=dict[min[1,:R0]][3:end,1], 
+function pres_contour(dict, mins, title)
+	t1 = contour(z=dict[mins[1,:R0]][2:end, 2:end], x=dict[mins[1,:R0]][1, 2:end], y=dict[mins[1,:R0]][2:end,1], 
 	contours_start =0,contours_end=2, 
 	colorbar_title="Error", showscale=true)
-	t2 = scatter(x=[min[1,:C1]],y=[min[1,:R1]], mode="markers", showlegend = false)
+	t2 = scatter(x=[mins[1,:C1]],y=[mins[1,:R1]], mode="markers", showlegend = false)
 	layout1 = PlotlyJS.Layout(titlefont_size=20, font_size=18, width=600, height=1000, margin_l=100, margin_r=100, margin_t=100, margin_b=100, showlegend=false)
 	p = plot([t1,t2], layout1)
-	# relayout!(p, titlefont_size=20, font_size=18, width=600, height=1000, margin_l=100, margin_r=100, margin_t=100, margin_b=100, showlegend=false)
-	savefig(p, title)
+	relayout!(p, titlefont_size=20, font_size=18, width=600, height=1000, margin_l=100, margin_r=100, margin_t=100, margin_b=100, showlegend=false)
+	# savefig(p, title, width=600, height=1000,)
 
 	# PlotlyJS.savefig(p, "figures/test.pdf")
 

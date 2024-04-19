@@ -58,6 +58,8 @@ for j in 1:20:101
     p50_all[string(j)] = p50_plot
 end
 
+p100_all = OrderedDict()
+
 for j in 1:20:101
     k = 1
     p100_plot = Array{Float64}(undef, 20, 2)
@@ -81,7 +83,7 @@ for j in 1:20:101
         end
     end
 
-    p50_all[string(j)] = p50_plot
+    p100_all[string(j)] = p100_plot
 end
 
 # p100_all = OrderedDict()
@@ -982,6 +984,8 @@ pgfsave("figures/dis_plot.pdf", dis_plot, include_preamble = false)
 
 # pgfsave("figures/P50_plot.pdf",
 #         P50_plot)
+pgfsave("figures/P100_plot.pdf",
+        P100_plot)
 
 # pgfsave("figures/Pcomp_plot.pdf",
 # Pcomp_plot)
