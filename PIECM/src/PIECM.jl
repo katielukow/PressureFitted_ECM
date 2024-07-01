@@ -253,8 +253,14 @@ end
 # Q = capacity [Ah]
 
 function ecm_discrete(x, n_RC, uᵢ, Δ ::Vector , eta, Q, OCV, Init_V)
-        
-	interp_linear_init = linear_interpolation(OCV."Voltage", OCV."State_of_Charge") # Interpolation function for OCV based on capacity change
+	# Sort the data
+	sorted_voltages = sort(OCV."Voltage")
+	sorted_soc = sort(OCV."State_of_Charge")
+
+	# Perform the interpolation
+	interp_linear_init = linear_interpolation(sorted_voltages, sorted_soc)
+			
+	# interp_linear_init = linear_interpolation(OCV."Voltage", OCV."State_of_Charge") # Interpolation function for OCV based on capacity change
 	interp_linear = linear_interpolation(OCV."State_of_Charge", OCV."Voltage")
 
 	# # RC Params
