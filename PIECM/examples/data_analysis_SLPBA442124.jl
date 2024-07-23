@@ -275,26 +275,26 @@ P100_plot = @pgf Axis(
 
 )
 
-# Pcomp_plot = @pgf Axis(
-#     {
-#         height = "7cm", width = "15cm",    
-#         xlabel="State of Charge ["*L"\%"*"]",
-#         ylabel="Stack Pressure [kPa]",
-#         xmin = 0, 
-#         xmax = 101,
-#         # ymax = 15,
-#         # ymin = 10,
-#         xtick = 0:10:100,
-#         legend_pos= "south east"
-#     },
+Pcomp_plot = @pgf Axis(
+    {
+        height = "7cm", width = "15cm",    
+        xlabel="State of Charge ["*L"\%"*"]",
+        ylabel="Stack Pressure [kPa]",
+        xmin = 0, 
+        xmax = 101,
+        # ymax = 15,
+        # ymin = 10,
+        xtick = 0:10:100,
+        legend_pos= "south east"
+    },
 
-#     Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = p50_all["1"][:,2], y = p50_all["1"][:,1])),
-#     LegendEntry("50 kPa"),
-#     Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = p100_all["1"][:,2], y = p100_all["1"][:,1])),
-#     LegendEntry("100 kPa"),
-#     Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = p100_all["1"][:,2], y = p100_all["1"][:,1])),
-#     LegendEntry("100 kPa"),
-# )
+    Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = p50_all["1"][:,2], y = p50_all["1"][:,1]./ p50_all["1"][1,1])),
+    LegendEntry("50 kPa"),
+    Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = p100_all["1"][:,2], y = p100_all["1"][:,1]./ p100_all["1"][1,1])),
+    LegendEntry("100 kPa"),
+    # Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = p100_all["1"][:,2], y = p100_all["1"][:,1])),
+    # LegendEntry("100 kPa"),
+)
 
 # Pcomphppc_plot = @pgf Axis(
 
@@ -834,66 +834,108 @@ Pulsezoom_plot = @pgf GroupPlot(
 
 # )
 
-# dis_plot = @pgf GroupPlot(
+dis_plot = @pgf GroupPlot(
 
 
-#     {
-#         group_style =
-#         {
-#             group_size="2 by 1",
-#             # xticklabels_at="edge bottom",
-#             # yticklabels_at="edge left",
-#             # legend_pos= "north west"
-#             horizontal_sep = "2cm"
-#         },
-#         height = "7cm", width = "10cm",    
+    {
+        group_style =
+        {
+            group_size="2 by 2",
+            # xticklabels_at="edge bottom",
+            # yticklabels_at="edge left",
+            # legend_pos= "north west"
+            horizontal_sep = "2cm",
+            vertical_sep = "2cm",
+        },
+        height = "7cm", width = "10cm",    
 
-#     },
+    },
 
-#     {
-#         # height = "8cm", width = "15cm",
-#         # xlabel="Cycle",
-#         xlabel="State-of-Charge ["*L"\%"*"]",
-#         ylabel="Voltage [V]",
-#         xmin = 0.875, 
-#         xmax = 1.075,
-#         ymin = 2.98,
-#         ymax = 3.6,
-#         # ytick = 0.98:0.01:1.00,
-#         xtick = 0:0.05:1.1,
-#         legend_pos= "north east"
-#     },
+    {
+        # height = "8cm", width = "15cm",
+        # xlabel="Cycle",
+        xlabel="State-of-Charge ["*L"\%"*"]",
+        ylabel="Voltage [V]",
+        xmin = 0, 
+        xmax = 1.075,
+        # ymin = 2.98,
+        # ymax = 3.6,
+        # ytick = 0.98:0.01:1.00,
+        # xtick = 0:0.05:1.1,
+        legend_pos= "north east"
+    },
 
-#     Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p0_dis_init[:,"Discharge_Capacity(Ah)"]./p0_dis_init[end,"Discharge_Capacity(Ah)"], y = p0_dis_init[:,"Voltage(V)"])),
-#     LegendEntry("0 kPa"),
-#     Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p50_dis_init[:,"Discharge_Capacity(Ah)"]./p50_dis_init[end,"Discharge_Capacity(Ah)"], y = p50_dis_init[:,"Voltage(V)"])),
-#     LegendEntry("50 kPa"),
-#     Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p100_dis_init[:,"Discharge_Capacity(Ah)"]./p100_dis_init[end,"Discharge_Capacity(Ah)"], y = p100_dis_init[:,"Voltage(V)"])),
-#     LegendEntry("100 kPa"),
+    Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p0_dis_init[:,"Discharge_Capacity(Ah)"]./p0_dis_init[end,"Discharge_Capacity(Ah)"], y = p0_dis_init[:,"Voltage(V)"])),
+    LegendEntry("0 kPa"),
+    Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p50_dis_init[:,"Discharge_Capacity(Ah)"]./p50_dis_init[end,"Discharge_Capacity(Ah)"], y = p50_dis_init[:,"Voltage(V)"])),
+    LegendEntry("50 kPa"),
+    Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p100_dis_init[:,"Discharge_Capacity(Ah)"]./p100_dis_init[end,"Discharge_Capacity(Ah)"], y = p100_dis_init[:,"Voltage(V)"])),
+    LegendEntry("100 kPa"),
 
-#     {
-#         # height = "8cm", width = "15cm",
-#         xlabel="State-of-Charge ["*L"\%"*"]",
-#         # ylabel="Voltage [V]",
-#         xmin = 0.875, 
-#         xmax = 1.075,
-#         ymin = 2.98,
-#         ymax = 3.6,
-#         # # ytick = 0.98:0.01:1.00,
-#         xtick = 0:0.05:1.1,
-#         legend_pos= "north east"
-#     },
+    {
+        # height = "8cm", width = "15cm",
+        # xlabel="Cycle",
+        xlabel="State-of-Charge ["*L"\%"*"]",
+        ylabel="Voltage [V]",
+        xmin = 0.875, 
+        xmax = 1.075,
+        ymin = 2.98,
+        ymax = 3.6,
+        # ytick = 0.98:0.01:1.00,
+        xtick = 0:0.05:1.1,
+        legend_pos= "north east"
+    },
 
-#     Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p0_discharge_all["5"][:,"Discharge_Capacity(Ah)"]./p0_dis_init[end,"Discharge_Capacity(Ah)"], y = p0_discharge_all["5"][:,"Voltage(V)"])),
-#     LegendEntry("0 kPa"),
-#     Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p50_discharge_all["5"][:,"Discharge_Capacity(Ah)"]./p50_dis_init[end,"Discharge_Capacity(Ah)"], y = p50_discharge_all["5"][:,"Voltage(V)"])),
-#     LegendEntry("50 kPa"),
-#     Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p100_discharge_all["5"][:,"Discharge_Capacity(Ah)"]./p100_dis_init[end,"Discharge_Capacity(Ah)"], y = p100_discharge_all["5"][:,"Voltage(V)"])),
-#     LegendEntry("100 kPa"),
+    Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p0_dis_init[:,"Discharge_Capacity(Ah)"]./p0_dis_init[end,"Discharge_Capacity(Ah)"], y = p0_dis_init[:,"Voltage(V)"])),
+    LegendEntry("0 kPa"),
+    Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p50_dis_init[:,"Discharge_Capacity(Ah)"]./p50_dis_init[end,"Discharge_Capacity(Ah)"], y = p50_dis_init[:,"Voltage(V)"])),
+    LegendEntry("50 kPa"),
+    Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p100_dis_init[:,"Discharge_Capacity(Ah)"]./p100_dis_init[end,"Discharge_Capacity(Ah)"], y = p100_dis_init[:,"Voltage(V)"])),
+    LegendEntry("100 kPa"),
+
+    {
+        # height = "8cm", width = "15cm",
+        xlabel="State-of-Charge ["*L"\%"*"]",
+        ylabel="Voltage [V]",
+        xmin = 0, 
+        xmax = 1.075,
+        # ymin = 2.98,
+        # ymax = 3.6,
+        # # ytick = 0.98:0.01:1.00,
+        # xtick = 0:0.05:1.1,
+        legend_pos= "north east"
+    },
+
+    Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p0_discharge_all["5"][:,"Discharge_Capacity(Ah)"]./p0_dis_init[end,"Discharge_Capacity(Ah)"], y = p0_discharge_all["5"][:,"Voltage(V)"])),
+    LegendEntry("0 kPa"),
+    Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p50_discharge_all["5"][:,"Discharge_Capacity(Ah)"]./p50_dis_init[end,"Discharge_Capacity(Ah)"], y = p50_discharge_all["5"][:,"Voltage(V)"])),
+    LegendEntry("50 kPa"),
+    Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p100_discharge_all["5"][:,"Discharge_Capacity(Ah)"]./p100_dis_init[end,"Discharge_Capacity(Ah)"], y = p100_discharge_all["5"][:,"Voltage(V)"])),
+    LegendEntry("100 kPa"),
+
+    {
+        # height = "8cm", width = "15cm",
+        xlabel="State-of-Charge ["*L"\%"*"]",
+        ylabel="Voltage [V]",
+        xmin = 0.875, 
+        xmax = 1.075,
+        ymin = 2.98,
+        ymax = 3.6,
+        # # ytick = 0.98:0.01:1.00,
+        xtick = 0:0.05:1.1,
+        legend_pos= "north east"
+    },
+
+    Plot({color = Ϟ[7], "thick"}, Table({x = "x", y = "y"}, x = p0_discharge_all["5"][:,"Discharge_Capacity(Ah)"]./p0_dis_init[end,"Discharge_Capacity(Ah)"], y = p0_discharge_all["5"][:,"Voltage(V)"])),
+    LegendEntry("0 kPa"),
+    Plot({color = Ϟ[5], "thick"}, Table({x = "x", y = "y"}, x = p50_discharge_all["5"][:,"Discharge_Capacity(Ah)"]./p50_dis_init[end,"Discharge_Capacity(Ah)"], y = p50_discharge_all["5"][:,"Voltage(V)"])),
+    LegendEntry("50 kPa"),
+    Plot({color = Ϟ[6], "thick"}, Table({x = "x", y = "y"}, x = p100_discharge_all["5"][:,"Discharge_Capacity(Ah)"]./p100_dis_init[end,"Discharge_Capacity(Ah)"], y = p100_discharge_all["5"][:,"Voltage(V)"])),
+    LegendEntry("100 kPa"),
 
 
-# )
-# pgfsave("figures/dis_plot.pdf", dis_plot, include_preamble = false)
+)
+pgfsave("figures/dis_plot.pdf", dis_plot, include_preamble = false)
 
 #  Ω_plot = @pgf Axis(
 
@@ -987,8 +1029,8 @@ Pulsezoom_plot = @pgf GroupPlot(
 # pgfsave("figures/P100_plot.pdf",
 #         P100_plot)
 
-# pgfsave("figures/Pcomp_plot.pdf",
-# Pcomp_plot)
+pgfsave("figures/Pcomp_plot_norm.pdf",
+Pcomp_plot)
 # pgfsave("figures/Rcomp_plot.pdf",
 # Rcomp_plot)
 # pgfsave("figures/Pulse15_plot.pdf",
@@ -1046,7 +1088,7 @@ voltage_all = @pgf GroupPlot(
         group_style =
         {
             group_size="1 by 2",
-            xticklabels_at="edge bottom",
+            # xticklabels_at="edge bottom",
             # yticklabels_at="edge left",
             # legend_pos= "north west"
             horizontal_sep = "2cm"
@@ -1057,29 +1099,30 @@ voltage_all = @pgf GroupPlot(
         # group_size="2 by 1",
         # height = "10cm", width = "15cm",    
         # xlabel="Time [hrs]",
+        xlabel="Time [hrs]",
         ylabel="Voltage [V]",
         xmin = 0, 
-        xmax = 280,
+        xmax = 23,
         ymin = 2.8,
         ymax = 4.3,
         # xtick = 0:10:100,
         # legend_pos= "north west"
     },
 
-    Plot({color = Ϟ[7]}, Table({x = "x", y = "y"}, x = mbpf_50kpa[:,"Test_Time(s)"]./3600, y = mbpf_50kpa[:,"Voltage(V)"])),
+    Plot({color = Ϟ[7]}, Table({x = "x", y = "y"}, x = kk[:,"Test_Time(s)"]./3600, y = kk[:,"Voltage(V)"])),
     {
         # height = "10cm", width = "15cm",    
         xlabel="Time [hrs]",
         ylabel="Current [A]",
         xmin = 0, 
-        xmax = 280,
+        xmax = 23,
         # ymin = 2.8,
         # ymax = 4.3,
         # xtick = 0:10:100,
         # legend_pos= "north west"
     },
 
-    Plot({color = Ϟ[8]}, Table({x = "x", y = "y"}, x = mbpf_50kpa[:,"Test_Time(s)"]./3600, y = mbpf_50kpa[:,"Current(A)"])),
+    Plot({color = Ϟ[8]}, Table({x = "x", y = "y"}, x = kk[:,"Test_Time(s)"]./3600, y = kk[:,"Current(A)"])),
 )
 
 pgfsave("figures/all_data.pdf",

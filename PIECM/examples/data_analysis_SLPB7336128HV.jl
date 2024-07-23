@@ -457,17 +457,17 @@ PHPPC_plot = @pgf Axis(
         xlabel="State of Charge ["*L"\%"*"]",
         ylabel="Stack Pressure [kPa]",
         xmin = 0, 
-        ymin = -5,
+        ymin = 0,
         legend_pos= "north west"
     },
 
-    Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = p40[:,2], y = p40[:,1])),
+    Plot({color = Ϟ[5], "thick", only_marks}, Table({x = "x", y = "y"}, x = p40[:,2], y = p40[:,1]./p40[1,1])),
     LegendEntry("47 kPa"),
-    Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = p140[:,2], y = p140[:,1])),
-    LegendEntry("140 kPa"),
-    Plot({color = Ϟ[7], "thick", only_marks}, Table({x = "x", y = "y"}, x = p200[:,2], y = p200[:,1])),
-    LegendEntry("210 kPa"),
+    # Plot({color = Ϟ[6], "thick", only_marks}, Table({x = "x", y = "y"}, x = p140[:,2], y = p140[:,1]./p140[1,1])),
+    # LegendEntry("140 kPa"),
+    # Plot({color = Ϟ[7], "thick", only_marks}, Table({x = "x", y = "y"}, x = p200[:,2], y = p200[:,1]./p200[1,1])),
+    # LegendEntry("210 kPa"),
 
 )
-pgfsave("figures/PHPPC_plot_mod1.pdf",
+pgfsave("figures/PHPPC_plot_mod1_norm.pdf",
 PHPPC_plot)
